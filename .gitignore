@@ -1,0 +1,13 @@
+# Flutter (frontend/ also has its own .gitignore from flutter create)
+frontend/build/
+frontend/.dart_tool/
+
+# Supabase CLI local files (only if the CLI is used)
+supabase/.temp/
+supabase/.branches/
+
+# Editors / OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
