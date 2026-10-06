@@ -14,10 +14,18 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch data from the database view we created earlier
+    _fetchFacilities();
+  }
+
+  void _fetchFacilities() {
     _facilitiesFuture = Supabase.instance.client
         .from('authority_legal_parking')
         .select();
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _fetchFacilities());
+    await _facilitiesFuture;
   }
 
   @override
@@ -30,14 +38,25 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('Legal parking coverage', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text('Verified facilities to guide drivers to', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Text('Legal parking coverage',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            Text('Verified facilities to guide drivers to',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _refresh,
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Mock Map (Kept static for now - will need Google Maps API key to make dynamic)
+          // Map placeholder (swap for Google Maps later)
           Expanded(
             flex: 4,
             child: Container(
@@ -45,20 +64,36 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFDCE6F2),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4))
+                ],
               ),
               child: Stack(
                 children: [
-                  Positioned(top: 60, left: 0, right: 0, child: Container(height: 15, color: Colors.white.withOpacity(0.6))),
-                  Positioned(top: 140, left: 0, right: 0, child: Container(height: 15, color: Colors.white.withOpacity(0.6))),
+                  Positioned(
+                      top: 60,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                          height: 15, color: Colors.white.withOpacity(0.6))),
+                  Positioned(
+                      top: 140,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                          height: 15, color: Colors.white.withOpacity(0.6))),
                   const Positioned(top: 80, left: 80, child: _GreenMarker()),
-                  const Positioned(top: 160, left: 220, child: _GreenMarker()),
+                  const Positioned(
+                      top: 160, left: 220, child: _GreenMarker()),
                 ],
               ),
             ),
           ),
-          
-          // List of facilities (NOW DYNAMIC FROM SUPABASE)
+
+          // Facilities list from Supabase
           Expanded(
             flex: 5,
             child: Container(
@@ -66,7 +101,9 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24)),
               ),
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: _facilitiesFuture,
@@ -74,26 +111,53 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.red, size: 48),
+                            const SizedBox(height: 16),
+                            Text('${snapshot.error}',
+                                textAlign: TextAlign.center),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _refresh,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFEAA22F)),
+                              child: const Text('Retry',
+                                  style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   }
-                  
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('No legal parking facilities found.'));
+                    return const Center(
+                      child: Text('No legal parking facilities found.'),
+                    );
                   }
 
                   final facilities = snapshot.data!;
-                  return ListView.builder(
-                    padding: const EdgeInsets.only(top: 20),
-                    itemCount: facilities.length,
-                    itemBuilder: (context, index) {
-                      final facility = facilities[index];
-                      return _FacilityItem(
-                        name: facility['name'] ?? 'Unknown Facility',
-                        freeSpaces: facility['available_bays'] ?? 0,
-                      );
-                    },
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 20),
+                      itemCount: facilities.length,
+                      itemBuilder: (context, index) {
+                        final facility = facilities[index];
+                        return _FacilityItem(
+                          name: facility['name'] ?? 'Unknown Facility',
+                          freeSpaces:
+                              (facility['available_bays'] as num?)?.toInt() ?? 0,
+                        );
+                      },
+                    ),
                   );
                 },
               ),
@@ -116,7 +180,12 @@ class _GreenMarker extends StatelessWidget {
         color: const Color(0xFF2E7D32),
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [BoxShadow(color: const Color(0xFF2E7D32).withOpacity(0.4), blurRadius: 6, spreadRadius: 2)],
+        boxShadow: [
+          BoxShadow(
+              color: const Color(0xFF2E7D32).withOpacity(0.4),
+              blurRadius: 6,
+              spreadRadius: 2)
+        ],
       ),
     );
   }
@@ -145,16 +214,27 @@ class _FacilityItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87)),
                 const SizedBox(height: 4),
-                const Text('Verified legal facility', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                const Text('Verified legal facility',
+                    style: TextStyle(fontSize: 13, color: Colors.grey)),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(20)),
-            child: Text('$freeSpaces free', style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 13, fontWeight: FontWeight.bold)),
+            decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text('$freeSpaces free',
+                style: const TextStyle(
+                    color: Color(0xFF2E7D32),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),

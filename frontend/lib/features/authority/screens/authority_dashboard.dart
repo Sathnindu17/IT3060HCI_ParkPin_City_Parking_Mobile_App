@@ -18,19 +18,49 @@ class AuthorityDashboard extends StatefulWidget {
 class _AuthorityDashboardState extends State<AuthorityDashboard> {
   late Future<Map<String, dynamic>> _statsFuture;
   int _currentIndex = 0;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   void initState() {
     super.initState();
     _fetchStats();
+    _setupRealtime();
+  }
+
+  @override
+  void dispose() {
+    // Clean up the realtime subscription
+    _realtimeChannel?.unsubscribe();
+    super.dispose();
   }
 
   void _fetchStats() {
-    // Fetch stats from the Supabase view we created
     _statsFuture = Supabase.instance.client
         .from('authority_dashboard_stats')
         .select()
         .single();
+  }
+
+  void _setupRealtime() {
+    // Listen for changes in illegal reports to auto-refresh stats
+    _realtimeChannel = Supabase.instance.client
+        .channel('dashboard_updates')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'illegal_parking_reports',
+          callback: (payload) {
+            if (mounted) {
+              setState(() => _fetchStats());
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _refreshStats() async {
+    setState(() => _fetchStats());
+    await _statsFuture;
   }
 
   @override
@@ -42,60 +72,35 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('City parking', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text('Colombo - live overview', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Text('City parking',
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Colombo - live overview',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _refreshStats,
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
             onPressed: () {},
           ),
         ],
       ),
-      // The FutureBuilder fetches the data before rendering the UI
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _statsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading stats: ${snapshot.error}'));
-          }
-
-          // Safely extract data from the view
-          final stats = snapshot.data ?? {};
-          final double occRate = (stats['occupancy_percentage'] as num?)?.toDouble() ?? 0.0;
-          final int alerts = stats['open_alerts'] as int? ?? 0;
-          final int fullLots = stats['full_lots'] as int? ?? 0;
-          
-          // Hotspots is not directly in the DB schema yet, so we mock it
-          const int hotspots = 3; 
-
-          return IndexedStack(
-            index: _currentIndex,
-            children: [
-              // Tab 0: Dashboard Content
-              _buildDashboardTab(occRate / 100.0, hotspots, alerts, fullLots),
-              
-              // Tab 1: Occupancy Map
-              const OccupancyMapScreen(),
-              
-              // Tab 2: Demand Reports
-              const DemandReportsScreen(),
-              
-              // Tab 3: Profile
-              const ProfileScreen(),
-            ],
-          );
-        },
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildDashboardTab(), // Has its own FutureBuilder
+          const OccupancyMapScreen(),
+          const DemandReportsScreen(),
+          const ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
         selectedItemColor: const Color(0xFF1A3B5C),
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
@@ -109,19 +114,66 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
     );
   }
 
-  // Extracted the Dashboard body into its own method (Now takes dynamic values)
-  Widget _buildDashboardTab(double occupancyRate, int hotspots, int alerts, int fullLots) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          _buildRadialChartCard(occupancyRate),
-          const SizedBox(height: 16),
-          _buildStatCards(hotspots, alerts, fullLots),
-          const SizedBox(height: 16),
-          _buildActionList(),
-        ],
-      ),
+  Widget _buildDashboardTab() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _statsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  const Text('Failed to load stats',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _refreshStats,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEAA22F),
+                    ),
+                    child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final stats = snapshot.data ?? {};
+        final double occRate =
+            (stats['occupancy_percentage'] as num?)?.toDouble() ?? 0.0;
+        final int alerts = stats['open_alerts'] as int? ?? 0;
+        final int fullLots = stats['full_lots'] as int? ?? 0;
+        const int hotspots = 3; // Placeholder until you add a hotspots view
+
+        return RefreshIndicator(
+          onRefresh: _refreshStats,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                _buildRadialChartCard(occRate / 100.0),
+                const SizedBox(height: 16),
+                _buildStatCards(hotspots, alerts, fullLots),
+                const SizedBox(height: 16),
+                _buildActionList(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -132,7 +184,12 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         children: [
@@ -153,7 +210,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                         showTitle: false,
                       ),
                       PieChartSectionData(
-                        value: (1 - occupancyRate) * 100,
+                        value: ((1 - occupancyRate) * 100).clamp(0, 100).toDouble(),
                         color: Colors.grey.shade300,
                         radius: 20,
                         showTitle: false,
@@ -166,16 +223,21 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                   children: [
                     Text(
                       '${(occupancyRate * 100).toInt()}%',
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+                      style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87),
                     ),
-                    const Text('occupied', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const Text('occupied',
+                        style: TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const Text('city-centre occupancy now', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const Text('city-centre occupancy now',
+              style: TextStyle(color: Colors.grey, fontSize: 14)),
         ],
       ),
     );
@@ -200,11 +262,20 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ],
         ),
         child: Column(
           children: [
-            Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87)),
             const SizedBox(height: 4),
             Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
@@ -218,69 +289,65 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: Column(
           children: [
-            // 1. Occupancy Map
-            ListTile(
-              leading: const Icon(Icons.location_on, color: Color(0xFF1A3B5C)),
-              title: const Text('Occupancy map'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const OccupancyMapScreen()),
-                );
-              },
+            _actionTile(
+              icon: Icons.location_on,
+              title: 'Occupancy map',
+              destination: const OccupancyMapScreen(),
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
-            
-            // 2. Illegal Parking
-            ListTile(
-              leading: const Icon(Icons.warning_amber_rounded, color: Color(0xFF1A3B5C)),
-              title: const Text('Illegal parking alerts'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const IllegalParkingScreen()),
-                );
-              },
+            _actionTile(
+              icon: Icons.warning_amber_rounded,
+              title: 'Illegal parking alerts',
+              destination: const IllegalParkingScreen(),
+              onReturn: _refreshStats,
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
-
-            // 3. Legal Parking
-            ListTile(
-              leading: const Icon(Icons.verified, color: Color(0xFF1A3B5C)),
-              title: const Text('Legal parking coverage'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LegalParkingScreen()),
-                );
-              },
+            _actionTile(
+              icon: Icons.verified,
+              title: 'Legal parking coverage',
+              destination: const LegalParkingScreen(),
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
-
-            // 4. Peak Hour Analysis
-            ListTile(
-              leading: const Icon(Icons.timeline, color: Color(0xFF1A3B5C)),
-              title: const Text('Peak-hour analysis'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PeakHourScreen()),
-                );
-              },
+            _actionTile(
+              icon: Icons.timeline,
+              title: 'Peak-hour analysis',
+              destination: const PeakHourScreen(),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _actionTile({
+    required IconData icon,
+    required String title,
+    required Widget destination,
+    VoidCallback? onReturn,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF1A3B5C)),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => destination),
+        );
+        // When we come back, refresh stats
+        if (onReturn != null) onReturn();
+      },
     );
   }
 }
