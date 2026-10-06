@@ -11,6 +11,10 @@ pluginManagement {
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
     repositories {
+        // Alibaba mirrors to bypass dl.google.com network errors
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -21,6 +25,19 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.1.0" apply false
     id("org.jetbrains.kotlin.android") version "2.4.0" apply false
+}
+
+dependencyResolutionManagement {
+    // CHANGED: PREFER_SETTINGS instead of FAIL_ON_PROJECT_REPOS
+    // This allows build.gradle.kts to also declare repositories
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+
+        google()
+        mavenCentral()
+    }
 }
 
 include(":app")
