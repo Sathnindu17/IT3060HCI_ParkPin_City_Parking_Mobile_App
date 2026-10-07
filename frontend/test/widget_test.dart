@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:parkpin/app.dart';
 import 'package:parkpin/core/utils/validators.dart';
 import 'package:parkpin/shared/widgets/primary_button.dart';
 
@@ -12,6 +13,15 @@ void main() {
     expect(find.text('Log in'), findsOneWidget);
     await tester.tap(find.text('Log in'));
     expect(taps, 1);
+  });
+
+  testWidgets('D01 splash shows the logo, then opens Role Selection', (tester) async {
+    await tester.pumpWidget(const ParkPinApp());
+    expect(find.text('ParkPin'), findsOneWidget);
+    expect(find.text('Find & reserve city parking'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 8));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome to ParkPin'), findsOneWidget);
   });
 
   test('Validators', () {

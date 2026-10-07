@@ -12,7 +12,7 @@ class ParkPinApp extends StatelessWidget {
       title: 'ParkPin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      initialRoute: AppRoutes.roleSelection,
+      initialRoute: AppRoutes.splash,
       routes: AppRoutes.routes,
       onUnknownRoute: (settings) => MaterialPageRoute(
         settings: settings,

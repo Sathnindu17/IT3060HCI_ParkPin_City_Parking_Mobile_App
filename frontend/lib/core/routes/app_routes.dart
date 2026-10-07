@@ -3,6 +3,7 @@ import 'package:parkpin/features/authority/authority_routes.dart';
 import 'package:parkpin/features/driver_active_booking/driver_active_routes.dart';
 import 'package:parkpin/features/driver_search_booking/driver_search_routes.dart';
 import 'package:parkpin/features/operator/operator_routes.dart';
+import 'package:parkpin/shared/screens/d01_splash_screen.dart';
 import 'package:parkpin/shared/screens/role_selection_screen.dart';
 
 /// App routes. Each member registers their own screens in their feature's
@@ -11,14 +12,16 @@ class AppRoutes {
   AppRoutes._();
 
   // ── Shared ──
-  static const String roleSelection = '/';
+  static const String splash = '/'; //              D01 – first screen of the app
+  static const String roleSelection = '/roles'; //  Role Selection
 
   // ── Entry route of each role (opened from Role Selection) ──
-  static const String driverEntry = '/driver/login'; //      Member 1 – Wijesekara S
+  static const String driverEntry = '/driver/login'; //  Member 1 – Wijesekara S / Member 4 – RupasingheKS
   static const String operatorEntry = '/operator/login'; //  Member 2 – Marasinghe M M W K
   static const String authorityEntry = '/authority/login'; // Member 3 – Ekanayaka E M K S
 
   static Map<String, WidgetBuilder> get routes => {
+        splash: (_) => const SplashScreen(),
         roleSelection: (_) => const RoleSelectionScreen(),
         ...DriverSearchRoutes.routes, //  D01–D13
         ...DriverActiveRoutes.routes, //  D14–D22
