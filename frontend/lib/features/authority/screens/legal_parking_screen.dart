@@ -35,9 +35,9 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A3B5C),
         iconTheme: const IconThemeData(color: Colors.white),
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('Legal parking coverage',
                 style: TextStyle(
                     color: Colors.white,
@@ -56,7 +56,6 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
       ),
       body: Column(
         children: [
-          // Map placeholder (swap for Google Maps later)
           Expanded(
             flex: 4,
             child: Container(
@@ -92,8 +91,6 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
               ),
             ),
           ),
-
-          // Facilities list from Supabase
           Expanded(
             flex: 5,
             child: Container(
@@ -112,34 +109,11 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline,
-                                color: Colors.red, size: 48),
-                            const SizedBox(height: 16),
-                            Text('${snapshot.error}',
-                                textAlign: TextAlign.center),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _refresh,
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFEAA22F)),
-                              child: const Text('Retry',
-                                  style: TextStyle(color: Colors.white)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+                    return Center(child: Text('Error: ${snapshot.error}'));
                   }
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(
-                      child: Text('No legal parking facilities found.'),
-                    );
+                        child: Text('No legal parking facilities found.'));
                   }
 
                   final facilities = snapshot.data!;
@@ -154,7 +128,8 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
                         return _FacilityItem(
                           name: facility['name'] ?? 'Unknown Facility',
                           freeSpaces:
-                              (facility['available_bays'] as num?)?.toInt() ?? 0,
+                              (facility['available_bays'] as num?)?.toInt() ??
+                                  0,
                         );
                       },
                     ),
@@ -171,6 +146,7 @@ class _LegalParkingScreenState extends State<LegalParkingScreen> {
 
 class _GreenMarker extends StatelessWidget {
   const _GreenMarker();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -194,6 +170,7 @@ class _GreenMarker extends StatelessWidget {
 class _FacilityItem extends StatelessWidget {
   final String name;
   final int freeSpaces;
+
   const _FacilityItem({required this.name, required this.freeSpaces});
 
   @override

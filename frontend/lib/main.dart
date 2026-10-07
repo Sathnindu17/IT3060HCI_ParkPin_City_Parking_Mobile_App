@@ -8,7 +8,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.publishableKey,  // ← FIXED: uses 'publishableKey'
+    anonKey: SupabaseConfig.publishableKey,
   );
 
   runApp(const ParkPinApp());

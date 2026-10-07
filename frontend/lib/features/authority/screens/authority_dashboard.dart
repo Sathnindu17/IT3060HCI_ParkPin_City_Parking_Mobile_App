@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'occupancy_map_screen.dart';
-import 'illegal_parking_screen.dart';
+import 'illegal_parking_screen.dart';         // Read-only
+import 'illegal_parking_crud_screen.dart';   // CRUD (NEW)
 import 'demand_reports_screen.dart';
 import 'profile_screen.dart';
-import 'legal_parking_screen.dart';
+import 'legal_parking_screen.dart';           // Read-only
+import 'legal_parking_crud_screen.dart';     // CRUD (NEW)
 import 'peak_hour_screen.dart';
 
 class AuthorityDashboard extends StatefulWidget {
@@ -29,7 +31,6 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
 
   @override
   void dispose() {
-    // Clean up the realtime subscription
     _realtimeChannel?.unsubscribe();
     super.dispose();
   }
@@ -42,7 +43,6 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
   }
 
   void _setupRealtime() {
-    // Listen for changes in illegal reports to auto-refresh stats
     _realtimeChannel = Supabase.instance.client
         .channel('dashboard_updates')
         .onPostgresChanges(
@@ -50,9 +50,15 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
           schema: 'public',
           table: 'illegal_parking_reports',
           callback: (payload) {
-            if (mounted) {
-              setState(() => _fetchStats());
-            }
+            if (mounted) setState(() => _fetchStats());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'legal_parking_zones',
+          callback: (payload) {
+            if (mounted) setState(() => _fetchStats());
           },
         )
         .subscribe();
@@ -73,7 +79,10 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
             Text('City parking',
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
             Text('Colombo - live overview',
                 style: TextStyle(color: Colors.white70, fontSize: 12)),
           ],
@@ -92,7 +101,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _buildDashboardTab(), // Has its own FutureBuilder
+          _buildDashboardTab(),
           const OccupancyMapScreen(),
           const DemandReportsScreen(),
           const ProfileScreen(),
@@ -105,9 +114,11 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Reports'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart), label: 'Reports'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
@@ -128,10 +139,12 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const Icon(Icons.error_outline,
+                      color: Colors.red, size: 48),
                   const SizedBox(height: 16),
                   const Text('Failed to load stats',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text('${snapshot.error}',
                       textAlign: TextAlign.center,
@@ -140,9 +153,9 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                   ElevatedButton(
                     onPressed: _refreshStats,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEAA22F),
-                    ),
-                    child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                        backgroundColor: const Color(0xFFEAA22F)),
+                    child: const Text('Retry',
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -155,7 +168,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
             (stats['occupancy_percentage'] as num?)?.toDouble() ?? 0.0;
         final int alerts = stats['open_alerts'] as int? ?? 0;
         final int fullLots = stats['full_lots'] as int? ?? 0;
-        const int hotspots = 3; // Placeholder until you add a hotspots view
+        const int hotspots = 3;
 
         return RefreshIndicator(
           onRefresh: _refreshStats,
@@ -168,7 +181,9 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                 const SizedBox(height: 16),
                 _buildStatCards(hotspots, alerts, fullLots),
                 const SizedBox(height: 16),
-                _buildActionList(),
+                _buildViewSection(),
+                const SizedBox(height: 16),
+                _buildCrudSection(),
               ],
             ),
           ),
@@ -210,7 +225,9 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                         showTitle: false,
                       ),
                       PieChartSectionData(
-                        value: ((1 - occupancyRate) * 100).clamp(0, 100).toDouble(),
+                        value: ((1 - occupancyRate) * 100)
+                            .clamp(0, 100)
+                            .toDouble(),
                         color: Colors.grey.shade300,
                         radius: 20,
                         showTitle: false,
@@ -277,56 +294,133 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                     fontWeight: FontWeight.bold,
                     color: Colors.black87)),
             const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(label,
+                style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionList() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: Column(
-          children: [
-            _actionTile(
-              icon: Icons.location_on,
-              title: 'Occupancy map',
-              destination: const OccupancyMapScreen(),
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            _actionTile(
-              icon: Icons.warning_amber_rounded,
-              title: 'Illegal parking alerts',
-              destination: const IllegalParkingScreen(),
-              onReturn: _refreshStats,
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            _actionTile(
-              icon: Icons.verified,
-              title: 'Legal parking coverage',
-              destination: const LegalParkingScreen(),
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            _actionTile(
-              icon: Icons.timeline,
-              title: 'Peak-hour analysis',
-              destination: const PeakHourScreen(),
-            ),
-          ],
+  // ============================================
+  // VIEW-ONLY SECTION
+  // ============================================
+  Widget _buildViewSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('VIEWS',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  letterSpacing: 1.2)),
         ),
-      ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4))
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              children: [
+                _actionTile(
+                  icon: Icons.location_on,
+                  title: 'Occupancy map',
+                  subtitle: 'Live congestion hotspots on map',
+                  destination: const OccupancyMapScreen(),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _actionTile(
+                  icon: Icons.warning_amber_rounded,
+                  title: 'Illegal parking alerts',
+                  subtitle: 'Read-only view of open alerts',
+                  destination: const IllegalParkingScreen(),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _actionTile(
+                  icon: Icons.verified,
+                  title: 'Legal parking coverage',
+                  subtitle: 'Read-only verified facilities list',
+                  destination: const LegalParkingScreen(),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _actionTile(
+                  icon: Icons.timeline,
+                  title: 'Peak-hour analysis',
+                  subtitle: 'Average occupancy by hour',
+                  destination: const PeakHourScreen(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================
+  // CRUD SECTION
+  // ============================================
+  Widget _buildCrudSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text('MANAGE',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  letterSpacing: 1.2)),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4))
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              children: [
+                _actionTile(
+                  icon: Icons.report_problem,
+                  title: 'Illegal parking reports',
+                  subtitle: 'Create, edit, resolve & delete reports',
+                  destination: const IllegalParkingCrudScreen(),
+                  onReturn: _refreshStats,
+                  isCrud: true,
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _actionTile(
+                  icon: Icons.location_city,
+                  title: 'Legal parking zones',
+                  subtitle: 'Create, edit & delete verified zones',
+                  destination: const LegalParkingCrudScreen(),
+                  onReturn: _refreshStats,
+                  isCrud: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -334,18 +428,68 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
     required IconData icon,
     required String title,
     required Widget destination,
+    String? subtitle,
     VoidCallback? onReturn,
+    bool isCrud = false,
   }) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF1A3B5C)),
-      title: Text(title),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isCrud
+              ? const Color(0xFFEAA22F).withOpacity(0.15)
+              : const Color(0xFF1A3B5C).withOpacity(0.10),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: isCrud ? const Color(0xFFEAA22F) : const Color(0xFF1A3B5C),
+          size: 22,
+        ),
+      ),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (isCrud)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAA22F),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'MANAGE',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+        ],
+      ),
+      subtitle: subtitle != null
+          ? Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                subtitle,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            )
+          : null,
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: () async {
         await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => destination),
         );
-        // When we come back, refresh stats
         if (onReturn != null) onReturn();
       },
     );
