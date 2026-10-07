@@ -35,12 +35,15 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.18.0
-  google_maps_flutter: ^2.18.2
   url_launcher: ^6.3.3
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.4.2
   intl: ^0.20.3
-  fl_chart: ^0.69.0 
+  fl_chart: ^0.69.0
+
+  # Map packages (open-source, no API key or card required)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

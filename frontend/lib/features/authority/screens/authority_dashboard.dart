@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'occupancy_map_screen.dart';
-import 'illegal_parking_screen.dart';         // Read-only
-import 'illegal_parking_crud_screen.dart';   // CRUD (NEW)
+import 'illegal_parking_screen.dart';
+import 'illegal_parking_crud_screen.dart';
 import 'demand_reports_screen.dart';
 import 'profile_screen.dart';
-import 'legal_parking_screen.dart';           // Read-only
-import 'legal_parking_crud_screen.dart';     // CRUD (NEW)
+import 'legal_parking_screen.dart';
+import 'legal_parking_crud_screen.dart';
 import 'peak_hour_screen.dart';
 
 class AuthorityDashboard extends StatefulWidget {
@@ -71,37 +71,15 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // ⚠️ NOTE: No parent AppBar. Each tab supplies its own header.
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1A3B5C),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('City parking',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            Text('Colombo - live overview',
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _refreshStats,
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _buildDashboardTab(),
+          _DashboardTab(
+            statsFuture: _statsFuture,
+            onRefresh: _refreshStats,
+          ),
           const OccupancyMapScreen(),
           const DemandReportsScreen(),
           const ProfileScreen(),
@@ -124,71 +102,113 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
       ),
     );
   }
+}
 
-  Widget _buildDashboardTab() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _statsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
+// ============================================
+// Dashboard Tab — has its own Scaffold + AppBar
+// ============================================
+class _DashboardTab extends StatelessWidget {
+  final Future<Map<String, dynamic>> statsFuture;
+  final Future<void> Function() onRefresh;
+
+  const _DashboardTab({
+    required this.statsFuture,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A3B5C),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('City parking',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            Text('Colombo - live overview',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: onRefresh,
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+            onPressed: () {},
+          ),
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: statsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 48),
+                    const SizedBox(height: 16),
+                    const Text('Failed to load stats',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: onRefresh,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEAA22F)),
+                      child: const Text('Retry',
+                          style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final stats = snapshot.data ?? {};
+          final double occRate =
+              (stats['occupancy_percentage'] as num?)?.toDouble() ?? 0.0;
+          final int alerts = stats['open_alerts'] as int? ?? 0;
+          final int fullLots = stats['full_lots'] as int? ?? 0;
+          const int hotspots = 3;
+
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline,
-                      color: Colors.red, size: 48),
+                  _buildRadialChartCard(occRate / 100.0),
                   const SizedBox(height: 16),
-                  const Text('Failed to load stats',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.grey)),
+                  _buildStatCards(hotspots, alerts, fullLots),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _refreshStats,
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEAA22F)),
-                    child: const Text('Retry',
-                        style: TextStyle(color: Colors.white)),
-                  ),
+                  _buildViewSection(context),
+                  const SizedBox(height: 16),
+                  _buildCrudSection(context, onRefresh),
                 ],
               ),
             ),
           );
-        }
-
-        final stats = snapshot.data ?? {};
-        final double occRate =
-            (stats['occupancy_percentage'] as num?)?.toDouble() ?? 0.0;
-        final int alerts = stats['open_alerts'] as int? ?? 0;
-        final int fullLots = stats['full_lots'] as int? ?? 0;
-        const int hotspots = 3;
-
-        return RefreshIndicator(
-          onRefresh: _refreshStats,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                _buildRadialChartCard(occRate / 100.0),
-                const SizedBox(height: 16),
-                _buildStatCards(hotspots, alerts, fullLots),
-                const SizedBox(height: 16),
-                _buildViewSection(),
-                const SizedBox(height: 16),
-                _buildCrudSection(),
-              ],
-            ),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 
@@ -302,10 +322,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
     );
   }
 
-  // ============================================
-  // VIEW-ONLY SECTION
-  // ============================================
-  Widget _buildViewSection() {
+  Widget _buildViewSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -334,6 +351,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
             child: Column(
               children: [
                 _actionTile(
+                  context: context,
                   icon: Icons.location_on,
                   title: 'Occupancy map',
                   subtitle: 'Live congestion hotspots on map',
@@ -341,6 +359,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 _actionTile(
+                  context: context,
                   icon: Icons.warning_amber_rounded,
                   title: 'Illegal parking alerts',
                   subtitle: 'Read-only view of open alerts',
@@ -348,6 +367,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 _actionTile(
+                  context: context,
                   icon: Icons.verified,
                   title: 'Legal parking coverage',
                   subtitle: 'Read-only verified facilities list',
@@ -355,6 +375,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 _actionTile(
+                  context: context,
                   icon: Icons.timeline,
                   title: 'Peak-hour analysis',
                   subtitle: 'Average occupancy by hour',
@@ -368,10 +389,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
     );
   }
 
-  // ============================================
-  // CRUD SECTION
-  // ============================================
-  Widget _buildCrudSection() {
+  Widget _buildCrudSection(BuildContext context, Future<void> Function() onRefresh) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,20 +418,22 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
             child: Column(
               children: [
                 _actionTile(
+                  context: context,
                   icon: Icons.report_problem,
                   title: 'Illegal parking reports',
                   subtitle: 'Create, edit, resolve & delete reports',
                   destination: const IllegalParkingCrudScreen(),
-                  onReturn: _refreshStats,
+                  onReturn: onRefresh,
                   isCrud: true,
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 _actionTile(
+                  context: context,
                   icon: Icons.location_city,
                   title: 'Legal parking zones',
                   subtitle: 'Create, edit & delete verified zones',
                   destination: const LegalParkingCrudScreen(),
-                  onReturn: _refreshStats,
+                  onReturn: onRefresh,
                   isCrud: true,
                 ),
               ],
@@ -425,6 +445,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
   }
 
   Widget _actionTile({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required Widget destination,
