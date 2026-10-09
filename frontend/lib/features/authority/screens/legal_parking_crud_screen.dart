@@ -9,8 +9,7 @@ class LegalParkingCrudScreen extends StatefulWidget {
       _LegalParkingCrudScreenState();
 }
 
-class _LegalParkingCrudScreenState
-    extends State<LegalParkingCrudScreen> {
+class _LegalParkingCrudScreenState extends State<LegalParkingCrudScreen> {
   late Future<List<Map<String, dynamic>>> _zonesFuture;
 
   @override
@@ -31,10 +30,27 @@ class _LegalParkingCrudScreenState
     await _zonesFuture;
   }
 
-  void _snack(String msg, Color c) {
+  void _showSnack(String msg, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: c));
+        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+  }
+
+  // ✅ NEW: Check for duplicate zone name
+  Future<bool> _hasDuplicateZone(String name, {String? excludeId}) async {
+    try {
+      var query = Supabase.instance.client
+          .from('legal_parking_zones')
+          .select('id')
+          .ilike('name', name);
+      if (excludeId != null) {
+        query = query.neq('id', excludeId);
+      }
+      final existing = await query.limit(1);
+      return existing.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _createZone() async {
@@ -43,15 +59,26 @@ class _LegalParkingCrudScreenState
       builder: (_) => const _ZoneDialog(),
     );
     if (result == null) return;
+
+    // ✅ NEW: Duplicate prevention check
+    final isDuplicate = await _hasDuplicateZone(result['name'] as String);
+    if (isDuplicate) {
+      _showSnack(
+        '⚠️ A zone named "${result['name']}" already exists',
+        Colors.orange,
+      );
+      return;
+    }
+
     try {
       await Supabase.instance.client.from('legal_parking_zones').insert({
         ...result,
         'created_by': Supabase.instance.client.auth.currentUser?.id,
       });
-      _snack('✅ Zone created', Colors.green);
+      _showSnack('✅ Zone created', Colors.green);
       _refresh();
     } catch (e) {
-      _snack('❌ $e', Colors.red);
+      _showSnack('❌ $e', Colors.red);
     }
   }
 
@@ -61,15 +88,29 @@ class _LegalParkingCrudScreenState
       builder: (_) => _ZoneDialog(existing: zone),
     );
     if (result == null) return;
+
+    // ✅ NEW: Duplicate prevention check (excluding current zone)
+    final isDuplicate = await _hasDuplicateZone(
+      result['name'] as String,
+      excludeId: zone['id'].toString(),
+    );
+    if (isDuplicate) {
+      _showSnack(
+        '⚠️ Another zone named "${result['name']}" already exists',
+        Colors.orange,
+      );
+      return;
+    }
+
     try {
       await Supabase.instance.client
           .from('legal_parking_zones')
           .update(result)
           .eq('id', zone['id']);
-      _snack('✅ Zone updated', Colors.green);
+      _showSnack('✅ Zone updated', Colors.green);
       _refresh();
     } catch (e) {
-      _snack('❌ $e', Colors.red);
+      _showSnack('❌ $e', Colors.red);
     }
   }
 
@@ -79,10 +120,10 @@ class _LegalParkingCrudScreenState
           .from('legal_parking_zones')
           .delete()
           .eq('id', id);
-      _snack('✅ Zone deleted', Colors.green);
+      _showSnack('✅ Zone deleted', Colors.green);
       _refresh();
     } catch (e) {
-      _snack('❌ $e', Colors.red);
+      _showSnack('❌ $e', Colors.red);
     }
   }
 
@@ -316,6 +357,9 @@ class _ZoneCard extends StatelessWidget {
   }
 }
 
+// ============================================
+// Zone Dialog (with validations)
+// ============================================
 class _ZoneDialog extends StatefulWidget {
   final Map<String, dynamic>? existing;
   const _ZoneDialog({this.existing});
@@ -363,7 +407,7 @@ class _ZoneDialogState extends State<_ZoneDialog> {
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextField(
               controller: _areaController,
               decoration: InputDecoration(
@@ -372,7 +416,7 @@ class _ZoneDialogState extends State<_ZoneDialog> {
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextField(
               controller: _capController,
               keyboardType: TextInputType.number,
@@ -382,10 +426,11 @@ class _ZoneDialogState extends State<_ZoneDialog> {
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             TextField(
               controller: _notesController,
               maxLines: 2,
+              maxLength: 300,
               decoration: InputDecoration(
                 labelText: 'Notes',
                 border: OutlineInputBorder(
@@ -404,21 +449,81 @@ class _ZoneDialogState extends State<_ZoneDialog> {
             backgroundColor: const Color(0xFFEAA22F),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 24, vertical: 10),
           ),
           onPressed: () {
-            if (_nameController.text.trim().isEmpty) {
+            // ✅ Validation 1: Zone name required
+            final name = _nameController.text.trim();
+            if (name.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                    content: Text('Zone name is required'),
-                    backgroundColor: Colors.orange),
+                  content: Text('⚠️ Zone name is required'),
+                  backgroundColor: Colors.orange,
+                ),
               );
               return;
             }
+
+            // ✅ Validation 2: Minimum length
+            if (name.length < 3) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Zone name must be at least 3 characters'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            // ✅ Validation 3: Capacity must be valid positive integer
+            final capText = _capController.text.trim();
+            final int? capacity = int.tryParse(capText);
+            if (capacity == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Capacity must be a valid number'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            if (capacity <= 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Capacity must be greater than 0'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+            if (capacity > 10000) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Capacity seems unrealistic (max 10000)'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            // ✅ Validation 4: Notes length
+            final notes = _notesController.text.trim();
+            if (notes.length > 300) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Notes cannot exceed 300 characters'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
             Navigator.pop(context, {
-              'name': _nameController.text.trim(),
+              'name': name,
               'area': _areaController.text.trim(),
-              'capacity': int.tryParse(_capController.text) ?? 0,
-              'notes': _notesController.text.trim(),
+              'capacity': capacity,
+              'notes': notes,
             });
           },
           child: Text(isEdit ? 'Update' : 'Create',

@@ -32,6 +32,15 @@
   <title>parkpin</title>
   <link rel="manifest" href="manifest.json">
 </head>
+<script>
+  // Suppress the Flutter Web ViewInsets assertion (Chrome quirk)
+  window.addEventListener('error', function(e) {
+    if (e.message && e.message.includes('_viewInsets.isNonNegative')) {
+      e.preventDefault();
+      return true;
+    }
+  }, true);
+</script>
 <body>
   <!--
     You can customize the "flutter_bootstrap.js" script.

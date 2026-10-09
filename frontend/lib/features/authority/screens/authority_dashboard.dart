@@ -26,6 +26,7 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
   void initState() {
     super.initState();
     _fetchStats();
+    _fetchHotspots();
     _setupRealtime();
   }
 
@@ -41,6 +42,16 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
         .select()
         .single();
   }
+
+  late Future<int> _hotspotsFuture;
+
+void _fetchHotspots() {
+  _hotspotsFuture = Supabase.instance.client
+      .from('authority_hotspot_count')
+      .select()
+      .single()
+      .then((row) => (row['hotspots'] as num?)?.toInt() ?? 0);
+}
 
   void _setupRealtime() {
     _realtimeChannel = Supabase.instance.client
@@ -140,16 +151,11 @@ class _DashboardTab extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
-            onPressed: onRefresh,
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined,
-                color: Colors.white, size: 22),
-            onPressed: () {},
-          ),
-        ],
+  IconButton(
+    icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+    onPressed: onRefresh,
+  ),
+],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: statsFuture,
@@ -166,7 +172,7 @@ class _DashboardTab extends StatelessWidget {
               (stats['occupancy_percentage'] as num?)?.toDouble() ?? 0.0;
           final int alerts = stats['open_alerts'] as int? ?? 0;
           final int fullLots = stats['full_lots'] as int? ?? 0;
-          const int hotspots = 3;
+          final int hotspots = stats['hotspots'] as int? ?? 0;
 
           return RefreshIndicator(
             onRefresh: onRefresh,
@@ -176,7 +182,6 @@ class _DashboardTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ---- Big Header Text ----
                   const Text(
                     'Live overview',
                     style: TextStyle(
@@ -190,26 +195,17 @@ class _DashboardTab extends StatelessWidget {
                     style: TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 24),
-
-                  // ---- Radial Chart Card ----
                   _buildRadialChartCard(occRate / 100.0),
                   const SizedBox(height: 16),
-
-                  // ---- Stat Cards ----
                   _buildStatCards(hotspots, alerts, fullLots),
                   const SizedBox(height: 28),
-
-                  // ---- VIEWS Section ----
                   _buildSectionHeader('VIEWS', 'Read-only insights'),
                   const SizedBox(height: 12),
                   _buildViewSection(context),
                   const SizedBox(height: 28),
-
-                  // ---- MANAGE Section ----
                   _buildSectionHeader('MANAGE', 'Full CRUD operations'),
                   const SizedBox(height: 12),
                   _buildCrudSection(context, onRefresh),
-
                   const SizedBox(height: 30),
                   const Center(
                     child: Text(
@@ -271,6 +267,7 @@ class _DashboardTab extends StatelessWidget {
     );
   }
 
+  // ✅ FIXED: Uses Flexible to prevent overflow
   Widget _buildSectionHeader(String title, String subtitle) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -282,8 +279,14 @@ class _DashboardTab extends StatelessWidget {
                 color: Colors.grey,
                 letterSpacing: 1.5)),
         const SizedBox(width: 8),
-        Text(subtitle,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+        Flexible(
+          child: Text(
+            subtitle,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
       ],
     );
   }
@@ -417,7 +420,9 @@ class _DashboardTab extends StatelessWidget {
                     color: Color(0xFF1A3B5C))),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1),
           ],
         ),
       ),
@@ -564,7 +569,9 @@ class _DashboardTab extends StatelessWidget {
                             style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF1A3B5C))),
+                                color: Color(0xFF1A3B5C)),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1),
                       ),
                       if (isCrud)
                         Container(
@@ -587,7 +594,9 @@ class _DashboardTab extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(subtitle,
                         style: const TextStyle(
-                            fontSize: 12, color: Colors.grey)),
+                            fontSize: 12, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1),
                   ],
                 ],
               ),

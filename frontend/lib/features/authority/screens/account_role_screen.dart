@@ -17,7 +17,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
     _fetchProfile();
   }
 
-  // ✅ UPDATED: Join authority_profiles
+  // Join authority_profiles
   void _fetchProfile() {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId != null) {
@@ -45,7 +45,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
         .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
-  // ✅ Only updates profiles table (name/phone live there)
+  // Only updates profiles table (name/phone live there)
   Future<void> _editProfile(Map<String, dynamic> profile) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -66,12 +66,43 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
     }
   }
 
+  // ✅ NEW: Check if new password matches current password
+  Future<bool> _isSameAsCurrentPassword(String newPassword) async {
+    try {
+      final email = Supabase.instance.client.auth.currentUser?.email;
+      if (email == null) return false;
+
+      // Attempt sign-in with the new password.
+      // If it succeeds, then the new password == current password.
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: newPassword,
+      );
+      return true;
+    } on AuthException {
+      // Wrong credentials → new password is different from current
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _changePassword() async {
     final newPassword = await showDialog<String>(
       context: context,
       builder: (_) => const _ChangePasswordDialog(),
     );
     if (newPassword == null || newPassword.isEmpty) return;
+
+    // ✅ NEW: Prevent same password as current
+    final isSame = await _isSameAsCurrentPassword(newPassword);
+    if (isSame) {
+      _showSnack(
+        '⚠️ New password cannot be the same as your current password',
+        Colors.orange,
+      );
+      return;
+    }
 
     try {
       await Supabase.instance.client.auth.updateUser(
@@ -131,7 +162,6 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
                   .substring(0, 10)
               : 'N/A';
 
-          // ✅ Extract region from nested authority_profiles
           final authorityData = (profile['authority_profiles'] as Map?) ?? {};
           final String region =
               (authorityData['assigned_region'] ?? 'Colombo').toString();
@@ -440,7 +470,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
 }
 
 // ============================================
-// Edit Profile Dialog
+// Edit Profile Dialog (with validations)
 // ============================================
 class _EditProfileDialog extends StatefulWidget {
   final Map<String, dynamic> profile;
@@ -453,6 +483,9 @@ class _EditProfileDialog extends StatefulWidget {
 class _EditProfileDialogState extends State<_EditProfileDialog> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
+
+  // ✅ NEW: Phone regex — accepts +94771234567, 0771234567, 94771234567
+  static final RegExp _phoneRegex = RegExp(r'^\+?[0-9]{9,15}$');
 
   @override
   void initState() {
@@ -497,6 +530,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Phone',
+                hintText: '+94771234567',
                 prefixIcon: const Icon(Icons.phone_outlined),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -518,18 +552,40 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
               padding: const EdgeInsets.symmetric(
                   horizontal: 24, vertical: 10)),
           onPressed: () {
-            if (_nameController.text.trim().isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Name is required'),
-                  backgroundColor: Colors.orange,
-                ),
+            // ✅ Validation 1: Name required
+            final name = _nameController.text.trim();
+            if (name.isEmpty) {
+              _showSnack('⚠️ Name is required', Colors.orange);
+              return;
+            }
+
+            // ✅ Validation 2: Name minimum length
+            if (name.length < 2) {
+              _showSnack('⚠️ Name must be at least 2 characters',
+                  Colors.orange);
+              return;
+            }
+
+            // ✅ Validation 3: Name maximum length
+            if (name.length > 100) {
+              _showSnack('⚠️ Name cannot exceed 100 characters',
+                  Colors.orange);
+              return;
+            }
+
+            // ✅ Validation 4 (NEW): Phone format
+            final phone = _phoneController.text.trim();
+            if (phone.isNotEmpty && !_phoneRegex.hasMatch(phone)) {
+              _showSnack(
+                '⚠️ Invalid phone number (digits only, 9-15 chars, + allowed)',
+                Colors.orange,
               );
               return;
             }
+
             Navigator.pop(context, {
-              'full_name': _nameController.text.trim(),
-              'phone': _phoneController.text.trim(),
+              'full_name': name,
+              'phone': phone,
             });
           },
           child: const Text('Save',
@@ -539,10 +595,15 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
       ],
     );
   }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
+  }
 }
 
 // ============================================
-// Change Password Dialog
+// Change Password Dialog (with validations)
 // ============================================
 class _ChangePasswordDialog extends StatefulWidget {
   const _ChangePasswordDialog();
@@ -603,6 +664,30 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
+            const SizedBox(height: 12),
+            // ✅ NEW: Helper text showing requirements
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EDF2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Icon(Icons.info_outline,
+                      size: 16, color: Color(0xFF1A3B5C)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Password must be 6+ characters and contain at least one letter and one number.',
+                      style: TextStyle(
+                          fontSize: 11, color: Color(0xFF1A3B5C)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -622,25 +707,35 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
             final pwd = _passwordController.text;
             final confirm = _confirmController.text;
 
+            // ✅ Validation 1: Minimum length
             if (pwd.length < 6) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('Password must be at least 6 characters'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+              _showSnack('⚠️ Password must be at least 6 characters',
+                  Colors.orange);
               return;
             }
+
+            // ✅ Validation 2: Must contain a letter
+            if (!RegExp(r'[a-zA-Z]').hasMatch(pwd)) {
+              _showSnack(
+                  '⚠️ Password must contain at least one letter',
+                  Colors.orange);
+              return;
+            }
+
+            // ✅ Validation 3: Must contain a number
+            if (!RegExp(r'[0-9]').hasMatch(pwd)) {
+              _showSnack(
+                  '⚠️ Password must contain at least one number',
+                  Colors.orange);
+              return;
+            }
+
+            // ✅ Validation 4: Must match confirmation
             if (pwd != confirm) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Passwords do not match'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
+              _showSnack('⚠️ Passwords do not match', Colors.orange);
               return;
             }
+
             Navigator.pop(context, pwd);
           },
           child: const Text('Update',
@@ -649,5 +744,10 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
         ),
       ],
     );
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 }

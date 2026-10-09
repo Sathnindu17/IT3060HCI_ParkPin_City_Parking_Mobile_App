@@ -15,29 +15,41 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // ✅ REAL Supabase login
+  // ✅ NEW: Email regex
+  static final RegExp _emailRegex =
+      RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+
   Future<void> _signIn() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
+    // ✅ Validation 1: Not empty
     if (email.isEmpty || password.isEmpty) {
       _showSnack('⚠️ Please enter email and password', Colors.orange);
       return;
     }
 
+    // ✅ NEW: Validation 2: Email format
+    if (!_emailRegex.hasMatch(email)) {
+      _showSnack('⚠️ Please enter a valid email address', Colors.orange);
+      return;
+    }
+
+    // ✅ NEW: Validation 3: Password minimum length
+    if (password.length < 6) {
+      _showSnack('⚠️ Password must be at least 6 characters', Colors.orange);
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      // 1. Authenticate with Supabase
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      if (response.user == null) {
-        throw Exception('Login failed');
-      }
+      if (response.user == null) throw Exception('Login failed');
 
-      // 2. Verify the user has the "authority" role
       final profile = await Supabase.instance.client
           .from('profiles')
           .select('role, full_name')
@@ -54,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception('Access denied: Not a Traffic Authority user.');
       }
 
-      // 3. Navigate to Dashboard
       if (mounted) {
         Navigator.pushReplacement(
           context,

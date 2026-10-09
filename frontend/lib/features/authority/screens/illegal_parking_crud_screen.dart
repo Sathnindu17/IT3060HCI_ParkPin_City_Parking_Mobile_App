@@ -46,12 +46,41 @@ class _IllegalParkingCrudScreenState extends State<IllegalParkingCrudScreen> {
         .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
+  // ✅ NEW: Check if the same area was reported in the last 5 minutes
+  Future<bool> _hasDuplicateReport(String area) async {
+    try {
+      final fiveMinutesAgo = DateTime.now()
+          .toUtc()
+          .subtract(const Duration(minutes: 5))
+          .toIso8601String();
+      final existing = await Supabase.instance.client
+          .from('illegal_parking_reports')
+          .select('id')
+          .ilike('area', area)
+          .gte('created_at', fiveMinutesAgo)
+          .limit(1);
+      return existing.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _createReport() async {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (_) => const _CreateReportDialog(),
     );
     if (result == null) return;
+
+    // ✅ NEW: Duplicate prevention check
+    final isDuplicate = await _hasDuplicateReport(result['area']!);
+    if (isDuplicate) {
+      _showSnack(
+        '⚠️ A report for "${result['area']}" already exists (within 5 min)',
+        Colors.orange,
+      );
+      return;
+    }
 
     try {
       await Supabase.instance.client.from('illegal_parking_reports').insert({
@@ -523,6 +552,9 @@ class _ReportCard extends StatelessWidget {
   }
 }
 
+// ============================================
+// CREATE Dialog (with validations)
+// ============================================
 class _CreateReportDialog extends StatefulWidget {
   const _CreateReportDialog();
   @override
@@ -557,13 +589,14 @@ class _CreateReportDialogState extends State<_CreateReportDialog> {
             const SizedBox(height: 14),
             TextField(
               controller: _descController,
+              maxLength: 500,
               decoration: InputDecoration(
                 labelText: 'Description',
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _severity,
               decoration: InputDecoration(
@@ -594,10 +627,44 @@ class _CreateReportDialogState extends State<_CreateReportDialog> {
                 horizontal: 24, vertical: 10),
           ),
           onPressed: () {
-            if (_areaController.text.trim().isEmpty) return;
+            // ✅ Validation 1: Area required
+            final area = _areaController.text.trim();
+            if (area.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Area / Location is required'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            // ✅ Validation 2: Minimum length
+            if (area.length < 3) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Area must be at least 3 characters'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            // ✅ Validation 3: Description length
+            final desc = _descController.text.trim();
+            if (desc.length > 500) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚠️ Description cannot exceed 500 characters'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
             Navigator.pop(context, {
-              'area': _areaController.text.trim(),
-              'description': _descController.text.trim(),
+              'area': area,
+              'description': desc,
               'severity': _severity,
             });
           },
