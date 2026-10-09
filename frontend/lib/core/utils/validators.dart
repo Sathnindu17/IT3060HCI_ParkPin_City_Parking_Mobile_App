@@ -29,6 +29,7 @@ class Validators {
 
   static String? phone(String? v) {
     if (v == null || v.trim().isEmpty) return null; // optional
+    if (RegExp(r'[^0-9+\-\s()]').hasMatch(v)) return 'Enter a valid phone number';
     final digits = v.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length < 9 || digits.length > 12) return 'Enter a valid phone number';
     return null;
