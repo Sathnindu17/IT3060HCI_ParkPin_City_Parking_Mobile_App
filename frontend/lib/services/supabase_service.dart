@@ -4,6 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class SupabaseService {
   SupabaseService._();
 
+  /// Completes when Supabase.initialize has finished (started in main).
+  /// Wait for this before using [client].
+  static late final Future<void> ready;
+
   static SupabaseClient get client => Supabase.instance.client;
 
   /// Turns any error into a short message that is safe to show to users.
