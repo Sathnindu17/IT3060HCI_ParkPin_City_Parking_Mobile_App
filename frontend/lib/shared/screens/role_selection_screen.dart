@@ -50,7 +50,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Image.asset(
-                      'assets/icon/app_icon.png',
+                      'assets/icons/app_icon.png',
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) =>
                           const Icon(Icons.location_on, color: AppColors.primary, size: 34),
