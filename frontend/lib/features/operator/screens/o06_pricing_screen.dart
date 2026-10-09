@@ -276,7 +276,9 @@ class _OperatorPricingScreenState extends State<OperatorPricingScreen> {
                               controller: _discount,
                               keyboardType: TextInputType.number,
                               onChanged: (_) => setState(() {}),
-                              validator: (v) => Validators.numberInRange(v, 0, 90, 'Discount'),
+                              validator: (v) => int.tryParse((v ?? '').trim()) == null && num.tryParse((v ?? '').trim()) != null
+                                  ? 'Discount must be a whole number'
+                                  : Validators.numberInRange(v, 0, 90, 'Discount'),
                             ),
                             const SizedBox(height: 6),
                             Row(

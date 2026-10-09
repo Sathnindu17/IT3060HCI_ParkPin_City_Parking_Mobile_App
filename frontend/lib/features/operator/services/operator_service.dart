@@ -117,7 +117,16 @@ class OperatorService {
   }
 
   Future<void> updateProfile({required String fullName, String? phone}) async {
-    final updated = _profile!.copyWith(fullName: fullName.trim(), phone: phone?.trim());
+    // Built directly (not copyWith) so a null phone clears the saved number.
+    final p = _profile!;
+    final updated = AppUser(
+      id: p.id,
+      fullName: fullName.trim(),
+      phone: phone?.trim(),
+      role: p.role,
+      facilityId: p.facilityId,
+      createdAt: p.createdAt,
+    );
     await _db.from(DbTables.profiles).update(updated.toMap()).eq('id', _uid);
     _profile = updated;
   }
