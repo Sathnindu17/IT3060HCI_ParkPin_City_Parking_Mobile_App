@@ -19,7 +19,11 @@ void main() {
     await tester.pumpWidget(const ParkPinApp());
     expect(find.text('ParkPin'), findsOneWidget);
     expect(find.text('Find & reserve city parking'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 8));
+    // The splash waits (at most 0.8 s) for its images, then shows for 3.5 s.
+    // Pump in steps so the timer it starts after becoming visible can run.
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(find.text('Welcome to ParkPin'), findsOneWidget);
   });
