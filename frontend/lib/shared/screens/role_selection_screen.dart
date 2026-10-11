@@ -28,182 +28,196 @@ class RoleSelectionScreen extends StatelessWidget {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Column(
-          children: [
-            // ============================================
-            // HEADER
-            // ============================================
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(24, top + 40, 24, 54),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.primary, _navyLight],
+        // ✅ FIXED: Wrap in LayoutBuilder + SingleChildScrollView
+        // so the screen never overflows on small windows
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                  minWidth: constraints.maxWidth,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ParkPin Logo
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Image.asset(
-                      'assets/icons/app_icon.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.location_on,
-                        color: AppColors.primary,
-                        size: 34,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // Title
-                  const Text(
-                    'Welcome to ParkPin',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 27,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Subtitle
-                  Text(
-                    'Find, reserve and manage city-centre parking.\n'
-                    'Choose how you\'ll use the app.',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.88),
-                      fontSize: 14.5,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ============================================
-            // ROLE SELECTION CARDS
-            // ============================================
-            Expanded(
-              child: Transform.translate(
-                offset: const Offset(0, -24),
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
-                    children: const [
-                      Padding(
-                        padding: EdgeInsets.only(left: 4, bottom: 12),
-                        child: Text(
-                          'I am a…',
-                          style: TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w700,
-                            color: _ink,
-                          ),
+                child: Column(
+                  children: [
+                    // ============================================
+                    // HEADER
+                    // ============================================
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.fromLTRB(24, top + 40, 24, 54),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.primary, _navyLight],
                         ),
                       ),
-
-                      // ==================================
-                      // DRIVER ROLE
-                      // Opens D02 Onboarding
-                      // ==================================
-                      _RoleCard(
-                        icon: Icons.directions_car_filled_outlined,
-                        iconBg: Color(0xFFE6EDF8),
-                        iconColor: AppColors.primary,
-                        title: 'Driver',
-                        subtitle: 'Find, reserve & pay for parking',
-                        route: AppRoutes.driverEntry,
-                      ),
-
-                      SizedBox(height: 14),
-
-                      // ==================================
-                      // CAR-PARK OPERATOR ROLE
-                      // Keeps the team's existing route
-                      // ==================================
-                      _RoleCard(
-                        icon: Icons.local_parking_rounded,
-                        iconBg: AppColors.warningBg,
-                        iconColor: Color(0xFFB7791F),
-                        title: 'Car-park Operator',
-                        subtitle: 'Manage bays, bookings & gate',
-                        route: AppRoutes.operatorEntry,
-                      ),
-
-                      SizedBox(height: 14),
-
-                      // ==================================
-                      // TRAFFIC AUTHORITY ROLE
-                      // Keeps the team's existing route
-                      // ==================================
-                      _RoleCard(
-                        icon: Icons.verified_user_outlined,
-                        iconBg: Color(0xFFE3F4F1),
-                        iconColor: Color(0xFF0F766E),
-                        title: 'Traffic Authority',
-                        subtitle: 'Monitor occupancy & enforcement',
-                        route: AppRoutes.authorityEntry,
-                      ),
-
-                      SizedBox(height: 22),
-
-                      // Footer message
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.swap_horiz_rounded,
-                            size: 16,
-                            color: AppColors.textMuted,
-                          ),
-                          SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              'You can switch roles anytime from Profile',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textMuted,
+                          // ParkPin Logo
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black
+                                      .withValues(alpha: 0.18),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Image.asset(
+                              'assets/icons/app_icon.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Icons.location_on,
+                                color: AppColors.primary,
+                                size: 34,
                               ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 22),
+
+                          // Title
+                          const Text(
+                            'Welcome to ParkPin',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 27,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Subtitle
+                          Text(
+                            'Find, reserve and manage city-centre parking.\n'
+                            'Choose how you\'ll use the app.',
+                            style: TextStyle(
+                              color: Colors.white
+                                  .withValues(alpha: 0.88),
+                              fontSize: 14.5,
+                              height: 1.4,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // ============================================
+                    // ROLE SELECTION CARDS
+                    // ============================================
+                    Transform.translate(
+                      offset: const Offset(0, -24),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Padding(
+                              padding:
+                                  EdgeInsets.only(left: 4, bottom: 12),
+                              child: Text(
+                                'I am a…',
+                                style: TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _ink,
+                                ),
+                              ),
+                            ),
+
+                            // ==================================
+                            // DRIVER ROLE — Opens D02 Onboarding
+                            // ==================================
+                            const _RoleCard(
+                              icon: Icons.directions_car_filled_outlined,
+                              iconBg: Color(0xFFE6EDF8),
+                              iconColor: AppColors.primary,
+                              title: 'Driver',
+                              subtitle: 'Find, reserve & pay for parking',
+                              route: AppRoutes.driverEntry,
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // ==================================
+                            // CAR-PARK OPERATOR ROLE
+                            // ==================================
+                            const _RoleCard(
+                              icon: Icons.local_parking_rounded,
+                              iconBg: AppColors.warningBg,
+                              iconColor: Color(0xFFB7791F),
+                              title: 'Car-park Operator',
+                              subtitle: 'Manage bays, bookings & gate',
+                              route: AppRoutes.operatorEntry,
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // ==================================
+                            // TRAFFIC AUTHORITY ROLE
+                            // ==================================
+                            const _RoleCard(
+                              icon: Icons.verified_user_outlined,
+                              iconBg: Color(0xFFE3F4F1),
+                              iconColor: Color(0xFF0F766E),
+                              title: 'Traffic Authority',
+                              subtitle: 'Monitor occupancy & enforcement',
+                              route: AppRoutes.authorityEntry,
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            // Footer message
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.swap_horiz_rounded,
+                                  size: 16,
+                                  color: AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'You can switch roles anytime from Profile',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -236,8 +250,7 @@ class _RoleCard extends StatelessWidget {
   void _navigate(BuildContext context) {
     HapticFeedback.selectionClick();
 
-    // DRIVER:
-    // Navigate to D02 onboarding before Driver Login.
+    // DRIVER: Navigate to D02 onboarding
     if (route == AppRoutes.driverEntry) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -247,8 +260,7 @@ class _RoleCard extends StatelessWidget {
       return;
     }
 
-    // OPERATOR and AUTHORITY:
-    // Preserve the routes implemented by teammates.
+    // OPERATOR and AUTHORITY: use named routes
     Navigator.of(context).pushNamed(route);
   }
 
@@ -276,7 +288,8 @@ class _RoleCard extends StatelessWidget {
           child: InkWell(
             onTap: () => _navigate(context),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 18),
               child: Row(
                 children: [
                   // Role icon

@@ -26,7 +26,6 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
   void initState() {
     super.initState();
     _fetchStats();
-    _fetchHotspots();
     _setupRealtime();
   }
 
@@ -43,24 +42,15 @@ class _AuthorityDashboardState extends State<AuthorityDashboard> {
         .single();
   }
 
-  late Future<int> _hotspotsFuture;
-
-void _fetchHotspots() {
-  _hotspotsFuture = Supabase.instance.client
-      .from('authority_hotspot_count')
-      .select()
-      .single()
-      .then((row) => (row['hotspots'] as num?)?.toInt() ?? 0);
-}
-
+  // ✅ REALTIME: Subscribe to all tables that drive dashboard stats
   void _setupRealtime() {
     _realtimeChannel = Supabase.instance.client
-        .channel('dashboard_updates')
+        .channel('authority_dashboard_realtime')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'illegal_parking_reports',
-          callback: (payload) {
+          callback: (_) {
             if (mounted) setState(() => _fetchStats());
           },
         )
@@ -68,7 +58,31 @@ void _fetchHotspots() {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'legal_parking_zones',
-          callback: (payload) {
+          callback: (_) {
+            if (mounted) setState(() => _fetchStats());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bookings',
+          callback: (_) {
+            if (mounted) setState(() => _fetchStats());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bays',
+          callback: (_) {
+            if (mounted) setState(() => _fetchStats());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'parking_facilities',
+          callback: (_) {
             if (mounted) setState(() => _fetchStats());
           },
         )
@@ -151,11 +165,11 @@ class _DashboardTab extends StatelessWidget {
           ],
         ),
         actions: [
-  IconButton(
-    icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
-    onPressed: onRefresh,
-  ),
-],
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+            onPressed: onRefresh,
+          ),
+        ],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: statsFuture,
@@ -267,7 +281,6 @@ class _DashboardTab extends StatelessWidget {
     );
   }
 
-  // ✅ FIXED: Uses Flexible to prevent overflow
   Widget _buildSectionHeader(String title, String subtitle) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,

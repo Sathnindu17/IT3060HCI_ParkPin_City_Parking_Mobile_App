@@ -11,11 +11,34 @@ class IllegalParkingCrudScreen extends StatefulWidget {
 
 class _IllegalParkingCrudScreenState extends State<IllegalParkingCrudScreen> {
   late Future<List<Map<String, dynamic>>> _reportsFuture;
+  RealtimeChannel? _realtimeChannel; // ✅ NEW
 
   @override
   void initState() {
     super.initState();
     _fetchReports();
+    _setupRealtime(); // ✅ NEW
+  }
+
+  @override
+  void dispose() {
+    _realtimeChannel?.unsubscribe(); // ✅ NEW
+    super.dispose();
+  }
+
+  // ✅ NEW: Live updates when Drivers or Authority change reports
+  void _setupRealtime() {
+    _realtimeChannel = Supabase.instance.client
+        .channel('illegal_reports_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'illegal_parking_reports',
+          callback: (_) {
+            if (mounted) setState(() => _fetchReports());
+          },
+        )
+        .subscribe();
   }
 
   void _fetchReports() {
@@ -46,7 +69,6 @@ class _IllegalParkingCrudScreenState extends State<IllegalParkingCrudScreen> {
         .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
-  // ✅ NEW: Check if the same area was reported in the last 5 minutes
   Future<bool> _hasDuplicateReport(String area) async {
     try {
       final fiveMinutesAgo = DateTime.now()
@@ -72,7 +94,6 @@ class _IllegalParkingCrudScreenState extends State<IllegalParkingCrudScreen> {
     );
     if (result == null) return;
 
-    // ✅ NEW: Duplicate prevention check
     final isDuplicate = await _hasDuplicateReport(result['area']!);
     if (isDuplicate) {
       _showSnack(
@@ -552,9 +573,6 @@ class _ReportCard extends StatelessWidget {
   }
 }
 
-// ============================================
-// CREATE Dialog (with validations)
-// ============================================
 class _CreateReportDialog extends StatefulWidget {
   const _CreateReportDialog();
   @override
@@ -627,7 +645,6 @@ class _CreateReportDialogState extends State<_CreateReportDialog> {
                 horizontal: 24, vertical: 10),
           ),
           onPressed: () {
-            // ✅ Validation 1: Area required
             final area = _areaController.text.trim();
             if (area.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -639,7 +656,6 @@ class _CreateReportDialogState extends State<_CreateReportDialog> {
               return;
             }
 
-            // ✅ Validation 2: Minimum length
             if (area.length < 3) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -650,7 +666,6 @@ class _CreateReportDialogState extends State<_CreateReportDialog> {
               return;
             }
 
-            // ✅ Validation 3: Description length
             final desc = _descController.text.trim();
             if (desc.length > 500) {
               ScaffoldMessenger.of(context).showSnackBar(

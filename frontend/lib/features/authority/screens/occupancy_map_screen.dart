@@ -12,11 +12,42 @@ class OccupancyMapScreen extends StatefulWidget {
 
 class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
   late Future<List<Map<String, dynamic>>> _facilitiesFuture;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   void initState() {
     super.initState();
     _fetchFacilities();
+    _setupRealtime();
+  }
+
+  @override
+  void dispose() {
+    _realtimeChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  // ✅ Live updates when Operators add facilities or update bays
+  void _setupRealtime() {
+    _realtimeChannel = Supabase.instance.client
+        .channel('occupancy_map_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'parking_facilities',
+          callback: (_) {
+            if (mounted) setState(() => _fetchFacilities());
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bays',
+          callback: (_) {
+            if (mounted) setState(() => _fetchFacilities());
+          },
+        )
+        .subscribe();
   }
 
   void _fetchFacilities() {
@@ -270,7 +301,6 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
 
           return Column(
             children: [
-              // -------- MAP --------
               Expanded(
                 flex: 5,
                 child: FlutterMap(
@@ -281,6 +311,7 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                     maxZoom: 18,
                   ),
                   children: [
+                    // ✅ FIXED: OpenStreetMap tiles (no API key required)
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -298,8 +329,6 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                   ],
                 ),
               ),
-
-              // -------- LIST --------
               Expanded(
                 flex: 4,
                 child: Container(
@@ -449,9 +478,6 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
   }
 }
 
-// ============================================
-// List Item Widget
-// ============================================
 class _CongestionListItem extends StatelessWidget {
   final String zone;
   final String severity;

@@ -11,11 +11,34 @@ class LegalParkingCrudScreen extends StatefulWidget {
 
 class _LegalParkingCrudScreenState extends State<LegalParkingCrudScreen> {
   late Future<List<Map<String, dynamic>>> _zonesFuture;
+  RealtimeChannel? _realtimeChannel; // ✅ NEW
 
   @override
   void initState() {
     super.initState();
     _fetchZones();
+    _setupRealtime(); // ✅ NEW
+  }
+
+  @override
+  void dispose() {
+    _realtimeChannel?.unsubscribe(); // ✅ NEW
+    super.dispose();
+  }
+
+  // ✅ NEW: Live updates when any user changes zones
+  void _setupRealtime() {
+    _realtimeChannel = Supabase.instance.client
+        .channel('legal_zones_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'legal_parking_zones',
+          callback: (_) {
+            if (mounted) setState(() => _fetchZones());
+          },
+        )
+        .subscribe();
   }
 
   void _fetchZones() {
@@ -36,7 +59,6 @@ class _LegalParkingCrudScreenState extends State<LegalParkingCrudScreen> {
         .showSnackBar(SnackBar(content: Text(msg), backgroundColor: color));
   }
 
-  // ✅ NEW: Check for duplicate zone name
   Future<bool> _hasDuplicateZone(String name, {String? excludeId}) async {
     try {
       var query = Supabase.instance.client
@@ -60,7 +82,6 @@ class _LegalParkingCrudScreenState extends State<LegalParkingCrudScreen> {
     );
     if (result == null) return;
 
-    // ✅ NEW: Duplicate prevention check
     final isDuplicate = await _hasDuplicateZone(result['name'] as String);
     if (isDuplicate) {
       _showSnack(
@@ -89,7 +110,6 @@ class _LegalParkingCrudScreenState extends State<LegalParkingCrudScreen> {
     );
     if (result == null) return;
 
-    // ✅ NEW: Duplicate prevention check (excluding current zone)
     final isDuplicate = await _hasDuplicateZone(
       result['name'] as String,
       excludeId: zone['id'].toString(),
@@ -357,9 +377,6 @@ class _ZoneCard extends StatelessWidget {
   }
 }
 
-// ============================================
-// Zone Dialog (with validations)
-// ============================================
 class _ZoneDialog extends StatefulWidget {
   final Map<String, dynamic>? existing;
   const _ZoneDialog({this.existing});
@@ -453,7 +470,6 @@ class _ZoneDialogState extends State<_ZoneDialog> {
                 horizontal: 24, vertical: 10),
           ),
           onPressed: () {
-            // ✅ Validation 1: Zone name required
             final name = _nameController.text.trim();
             if (name.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -465,7 +481,6 @@ class _ZoneDialogState extends State<_ZoneDialog> {
               return;
             }
 
-            // ✅ Validation 2: Minimum length
             if (name.length < 3) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -476,7 +491,6 @@ class _ZoneDialogState extends State<_ZoneDialog> {
               return;
             }
 
-            // ✅ Validation 3: Capacity must be valid positive integer
             final capText = _capController.text.trim();
             final int? capacity = int.tryParse(capText);
             if (capacity == null) {
@@ -507,7 +521,6 @@ class _ZoneDialogState extends State<_ZoneDialog> {
               return;
             }
 
-            // ✅ Validation 4: Notes length
             final notes = _notesController.text.trim();
             if (notes.length > 300) {
               ScaffoldMessenger.of(context).showSnackBar(
