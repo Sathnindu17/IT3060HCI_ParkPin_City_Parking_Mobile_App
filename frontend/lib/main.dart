@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:parkpin/app.dart';
 import 'package:parkpin/core/config/supabase_config.dart';
-import 'package:parkpin/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
+  // Initialize the Flutter framework.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Start Supabase in the background so the first frame (the splash) is drawn
-  // straight away instead of waiting behind Android's launch screen. The
-  // splash waits for SupabaseService.ready before leaving.
-  SupabaseService.ready = Supabase.initialize(
+  // Initialize Supabase before launching ParkPin.
+  await Supabase.initialize(
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.publishableKey,
-  )..ignore(); // errors are handled where `ready` is awaited
+  );
+
+  // Launch the ParkPin application.
   runApp(const ParkPinApp());
 }
