@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/utils/report_exporter.dart';
 
 class DemandReportsScreen extends StatefulWidget {
   const DemandReportsScreen({super.key});
@@ -12,7 +11,7 @@ class DemandReportsScreen extends StatefulWidget {
 
 class _DemandReportsScreenState extends State<DemandReportsScreen> {
   late Future<_DemandData> _dataFuture;
-  bool _isExporting = false;
+  RealtimeChannel? _realtimeChannel; // ✅ NEW
 
   static const List<String> _dayLabels = [
     'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
@@ -22,6 +21,28 @@ class _DemandReportsScreenState extends State<DemandReportsScreen> {
   void initState() {
     super.initState();
     _fetchData();
+    _setupRealtime(); // ✅ NEW
+  }
+
+  @override
+  void dispose() {
+    _realtimeChannel?.unsubscribe(); // ✅ NEW
+    super.dispose();
+  }
+
+  // ✅ NEW: Live updates when Drivers create bookings
+  void _setupRealtime() {
+    _realtimeChannel = Supabase.instance.client
+        .channel('demand_reports_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'bookings',
+          callback: (_) {
+            if (mounted) setState(() => _fetchData());
+          },
+        )
+        .subscribe();
   }
 
   void _fetchData() {
@@ -68,64 +89,6 @@ class _DemandReportsScreenState extends State<DemandReportsScreen> {
     await _dataFuture;
   }
 
-  // ============================================
-  // EXPORT PDF
-  // ============================================
-  Future<void> _exportReport(_DemandData data) async {
-    setState(() => _isExporting = true);
-    try {
-      final List<int> counts =
-          List.generate(7, (i) => data.dayCounts[i + 1] ?? 0);
-      final int total = counts.fold<int>(0, (a, b) => a + b);
-
-      await ReportExporter.exportDemandReport(
-        dayCounts: data.dayCounts,
-        dayLabels: _dayLabels,
-        total: total,
-        busiestZone: data.busiestZone,
-        avgOccupancy: data.avgOccupancy,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Report downloaded'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Export failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
-    }
-  }
-
-  void _handleExportTap() {
-    _dataFuture.then((data) {
-      final hasData = data.dayCounts.values.any((v) => v > 0);
-      if (hasData) {
-        _exportReport(data);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No data to export'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,19 +103,6 @@ class _DemandReportsScreenState extends State<DemandReportsScreen> {
                 fontSize: 18,
                 fontWeight: FontWeight.bold)),
         actions: [
-          // ---- Export button ----
-          IconButton(
-            tooltip: 'Export PDF',
-            icon: _isExporting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
-                  )
-                : const Icon(Icons.download_outlined, color: Colors.white),
-            onPressed: _isExporting ? null : _handleExportTap,
-          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: _refresh,
@@ -197,72 +147,15 @@ class _DemandReportsScreenState extends State<DemandReportsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ---- Header Row with Export CTA ----
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Weekly demand',
-                                style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1A3B5C))),
-                            SizedBox(height: 6),
-                            Text('Booking patterns across the last 30 days.',
-                                style: TextStyle(
-                                    fontSize: 13, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                      // Export pill button
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isExporting ? null : _handleExportTap,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEAA22F),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: const Color(0xFFEAA22F)
-                                        .withOpacity(0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4))
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _isExporting
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2),
-                                      )
-                                    : const Icon(Icons.download_outlined,
-                                        color: Colors.white, size: 18),
-                                const SizedBox(width: 6),
-                                const Text('PDF',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const Text('Weekly demand',
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A3B5C))),
+                  const SizedBox(height: 6),
+                  const Text(
+                      'Booking patterns across the last 30 days.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey)),
                   const SizedBox(height: 24),
                   _buildBarChartCard(
                       counts, normalized, peakIdx, peakLabel, total),
