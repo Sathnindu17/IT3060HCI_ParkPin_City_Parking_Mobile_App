@@ -1,32 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:parkpin/app.dart';
+import 'package:parkpin/core/config/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'core/config/supabase_config.dart';
-import 'features/authority/screens/login_screen.dart';
 
 Future<void> main() async {
+  // Initialize the Flutter framework.
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Supabase before launching ParkPin.
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.publishableKey,
   );
 
+  // Launch the ParkPin application.
   runApp(const ParkPinApp());
-}
-
-class ParkPinApp extends StatelessWidget {
-  const ParkPinApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ParkPin Authority',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A3B5C)),
-        useMaterial3: true,
-      ),
-      home: const LoginScreen(),
-    );
-  }
 }
