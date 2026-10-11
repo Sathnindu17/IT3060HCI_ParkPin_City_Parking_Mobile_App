@@ -10,7 +10,7 @@ Future<void> main() async {
   // Initialize Supabase before launching ParkPin.
   await Supabase.initialize(
     url: SupabaseConfig.url,
-    publishableKey: SupabaseConfig.publishableKey,
+    anonKey: SupabaseConfig.publishableKey,
   );
 
   // Launch the ParkPin application.
