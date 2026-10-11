@@ -3,17 +3,22 @@ import 'package:flutter/services.dart';
 
 import 'package:parkpin/core/constants/app_colors.dart';
 import 'package:parkpin/core/routes/app_routes.dart';
-
-// D02 – Driver Onboarding Screen
 import 'package:parkpin/features/driver_search_booking/screens/d02_onboarding_live_bays_screen.dart';
 
-/// Start screen – choose Driver, Car-park Operator or Traffic Authority
-/// (Figma frame "Role Selection").
+/// ParkPin Role Selection Screen.
+///
+/// Allows users to select:
+/// - Driver
+/// - Car-park Operator
+/// - Traffic Authority
+///
+/// Driver navigates to D02 onboarding.
+/// Operator and Authority use their existing routes.
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
-  static const _ink = Color(0xFF14284B);
-  static const _navyLight = Color(0xFF2E5A99);
+  static const Color _ink = Color(0xFF14284B);
+  static const Color _navyLight = Color(0xFF2E5A99);
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +30,9 @@ class RoleSelectionScreen extends StatelessWidget {
         backgroundColor: AppColors.background,
         body: Column(
           children: [
-            // ── Header ──
+            // ============================================
+            // HEADER
+            // ============================================
             Container(
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(24, top + 40, 24, 54),
@@ -39,6 +46,7 @@ class RoleSelectionScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ParkPin Logo
                   Container(
                     width: 60,
                     height: 60,
@@ -64,7 +72,10 @@ class RoleSelectionScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 22),
+
+                  // Title
                   const Text(
                     'Welcome to ParkPin',
                     style: TextStyle(
@@ -74,7 +85,10 @@ class RoleSelectionScreen extends StatelessWidget {
                       letterSpacing: -0.3,
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
+                  // Subtitle
                   Text(
                     'Find, reserve and manage city-centre parking.\n'
                     'Choose how you\'ll use the app.',
@@ -88,7 +102,9 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
             ),
 
-            // ── Role cards ──
+            // ============================================
+            // ROLE SELECTION CARDS
+            // ============================================
             Expanded(
               child: Transform.translate(
                 offset: const Offset(0, -24),
@@ -115,7 +131,10 @@ class RoleSelectionScreen extends StatelessWidget {
                         ),
                       ),
 
-                      // DRIVER → D02 ONBOARDING
+                      // ==================================
+                      // DRIVER ROLE
+                      // Opens D02 Onboarding
+                      // ==================================
                       _RoleCard(
                         icon: Icons.directions_car_filled_outlined,
                         iconBg: Color(0xFFE6EDF8),
@@ -127,7 +146,10 @@ class RoleSelectionScreen extends StatelessWidget {
 
                       SizedBox(height: 14),
 
-                      // OPERATOR → EXISTING OPERATOR LOGIN
+                      // ==================================
+                      // CAR-PARK OPERATOR ROLE
+                      // Keeps the team's existing route
+                      // ==================================
                       _RoleCard(
                         icon: Icons.local_parking_rounded,
                         iconBg: AppColors.warningBg,
@@ -139,7 +161,10 @@ class RoleSelectionScreen extends StatelessWidget {
 
                       SizedBox(height: 14),
 
-                      // AUTHORITY → EXISTING AUTHORITY LOGIN
+                      // ==================================
+                      // TRAFFIC AUTHORITY ROLE
+                      // Keeps the team's existing route
+                      // ==================================
                       _RoleCard(
                         icon: Icons.verified_user_outlined,
                         iconBg: Color(0xFFE3F4F1),
@@ -151,6 +176,7 @@ class RoleSelectionScreen extends StatelessWidget {
 
                       SizedBox(height: 22),
 
+                      // Footer message
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -160,11 +186,14 @@ class RoleSelectionScreen extends StatelessWidget {
                             color: AppColors.textMuted,
                           ),
                           SizedBox(width: 6),
-                          Text(
-                            'You can switch roles anytime from Profile',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textMuted,
+                          Flexible(
+                            child: Text(
+                              'You can switch roles anytime from Profile',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         ],
@@ -181,6 +210,9 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 }
 
+// ============================================
+// REUSABLE ROLE CARD
+// ============================================
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
     required this.icon,
@@ -198,11 +230,14 @@ class _RoleCard extends StatelessWidget {
   final String subtitle;
   final String route;
 
-  // ── Role Navigation ──
+  // ============================================
+  // ROLE NAVIGATION
+  // ============================================
   void _navigate(BuildContext context) {
     HapticFeedback.selectionClick();
 
-    // DRIVER: Open D02 onboarding instead of Driver Login.
+    // DRIVER:
+    // Navigate to D02 onboarding before Driver Login.
     if (route == AppRoutes.driverEntry) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -212,7 +247,8 @@ class _RoleCard extends StatelessWidget {
       return;
     }
 
-    // OPERATOR and AUTHORITY: Keep existing navigation.
+    // OPERATOR and AUTHORITY:
+    // Preserve the routes implemented by teammates.
     Navigator.of(context).pushNamed(route);
   }
 
@@ -238,12 +274,12 @@ class _RoleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            // Updated navigation handler.
             onTap: () => _navigate(context),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               child: Row(
                 children: [
+                  // Role icon
                   Container(
                     width: 54,
                     height: 54,
@@ -253,7 +289,10 @@ class _RoleCard extends StatelessWidget {
                     ),
                     child: Icon(icon, color: iconColor, size: 28),
                   ),
+
                   const SizedBox(width: 16),
+
+                  // Role name and description
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +305,9 @@ class _RoleCard extends StatelessWidget {
                             color: AppColors.textPrimary,
                           ),
                         ),
+
                         const SizedBox(height: 4),
+
                         Text(
                           subtitle,
                           style: const TextStyle(
@@ -278,6 +319,8 @@ class _RoleCard extends StatelessWidget {
                       ],
                     ),
                   ),
+
+                  // Navigation arrow
                   Container(
                     width: 34,
                     height: 34,
