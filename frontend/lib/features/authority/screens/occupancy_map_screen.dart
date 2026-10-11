@@ -27,7 +27,6 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
     super.dispose();
   }
 
-  // ✅ Live updates when Operators add facilities or update bays
   void _setupRealtime() {
     _realtimeChannel = Supabase.instance.client
         .channel('occupancy_map_realtime')
@@ -69,6 +68,12 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
     if (rate < 0.2) return 'high';
     if (rate < 0.5) return 'med';
     return 'low';
+  }
+
+  // ✅ Only facilities with MED or HIGH congestion
+  bool _isHotspot(Map<String, dynamic> facility) {
+    final c = _calculateCongestion(facility);
+    return c == 'high' || c == 'med';
   }
 
   Color _colorFor(String congestion) {
@@ -252,13 +257,15 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
           }
 
           final facilities = snapshot.data!;
-          final sorted = List<Map<String, dynamic>>.from(facilities)
+          // ✅ Only MED + HIGH facilities in the list
+          final hotspots = facilities.where(_isHotspot).toList()
             ..sort((a, b) {
               const order = {'high': 0, 'med': 1, 'low': 2};
               return (order[_calculateCongestion(a)] ?? 3)
                   .compareTo(order[_calculateCongestion(b)] ?? 3);
             });
 
+          // Markers: show ALL verified facilities (so map shows every location)
           final markers = facilities
               .where((f) =>
                   f['latitude'] != null && f['longitude'] != null)
@@ -311,7 +318,6 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                     maxZoom: 18,
                   ),
                   children: [
-                    // ✅ FIXED: OpenStreetMap tiles (no API key required)
                     TileLayer(
                       urlTemplate:
                           'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -347,7 +353,8 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Hotspots',
+                          // ✅ Renamed to "Congested zones"
+                          const Text('Congested zones',
                               style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -359,7 +366,7 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                               color: const Color(0xFFE8EDF2),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text('${sorted.length} zones',
+                            child: Text('${hotspots.length} zones',
                                 style: const TextStyle(
                                     fontSize: 11,
                                     color: Color(0xFF1A3B5C),
@@ -371,28 +378,39 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                       Expanded(
                         child: RefreshIndicator(
                           onRefresh: _refresh,
-                          child: ListView.builder(
-                            physics:
-                                const AlwaysScrollableScrollPhysics(),
-                            padding:
-                                const EdgeInsets.only(bottom: 16),
-                            itemCount: sorted.length,
-                            itemBuilder: (context, index) {
-                              final facility = sorted[index];
-                              return _CongestionListItem(
-                                zone: facility['name'] ?? 'Unknown',
-                                severity: _calculateCongestion(facility),
-                                available: (facility['available_bays']
-                                            as num?)
-                                        ?.toInt() ??
-                                    0,
-                                total: (facility['total_bays'] as num?)
-                                        ?.toInt() ??
-                                    0,
-                                onTap: () => _showFacilitySheet(facility),
-                              );
-                            },
-                          ),
+                          child: hotspots.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No congested zones right now.',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding:
+                                      const EdgeInsets.only(bottom: 16),
+                                  itemCount: hotspots.length,
+                                  itemBuilder: (context, index) {
+                                    final facility = hotspots[index];
+                                    return _CongestionListItem(
+                                      zone: facility['name'] ?? 'Unknown',
+                                      severity:
+                                          _calculateCongestion(facility),
+                                      available:
+                                          (facility['available_bays']
+                                                      as num?)
+                                                  ?.toInt() ??
+                                              0,
+                                      total:
+                                          (facility['total_bays'] as num?)
+                                                  ?.toInt() ??
+                                              0,
+                                      onTap: () =>
+                                          _showFacilitySheet(facility),
+                                    );
+                                  },
+                                ),
                         ),
                       ),
                     ],
