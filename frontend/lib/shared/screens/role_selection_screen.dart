@@ -4,174 +4,170 @@ import 'package:flutter/services.dart';
 import 'package:parkpin/core/constants/app_colors.dart';
 import 'package:parkpin/core/routes/app_routes.dart';
 
+// D02 – Driver Onboarding Screen
 import 'package:parkpin/features/driver_search_booking/screens/d02_onboarding_live_bays_screen.dart';
 
-/// Start screen – choose Driver, Car-park Operator or Traffic Authority.
-/// Figma frame: "Role Selection"
+/// Start screen – choose Driver, Car-park Operator or Traffic Authority
+/// (Figma frame "Role Selection").
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
 
+  static const _ink = Color(0xFF14284B);
+  static const _navyLight = Color(0xFF2E5A99);
+
   @override
   Widget build(BuildContext context) {
-    final double top = MediaQuery.paddingOf(context).top;
+    final top = MediaQuery.paddingOf(context).top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
+        backgroundColor: AppColors.background,
         body: Column(
           children: [
-            // ============================================================
-            // TOP BLUE SECTION
-            // ============================================================
+            // ── Header ──
             Container(
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(
-                24,
-                top + 48,
-                24,
-                48,
-              ),
+              padding: EdgeInsets.fromLTRB(24, top + 40, 24, 54),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.primary,
-                    Color(0xFF2B5596),
-                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.primary, _navyLight],
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ParkPin icon
                   Container(
-                    width: 52,
-                    height: 52,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.location_on_outlined,
-                      color: AppColors.primary,
-                      size: 28,
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.asset(
+                      'assets/icons/app_icon.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.location_on,
+                        color: AppColors.primary,
+                        size: 34,
+                      ),
                     ),
                   ),
-
-                  const SizedBox(height: 18),
-
+                  const SizedBox(height: 22),
                   const Text(
                     'Welcome to ParkPin',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
-
-                  const SizedBox(height: 6),
-
+                  const SizedBox(height: 8),
                   Text(
-                    'Choose how you\'ll use the app',
+                    'Find, reserve and manage city-centre parking.\n'
+                    'Choose how you\'ll use the app.',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.88),
+                      fontSize: 14.5,
+                      height: 1.4,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // ============================================================
-            // ROLE SELECTION SECTION
-            // ============================================================
+            // ── Role cards ──
             Expanded(
               child: Transform.translate(
-                offset: const Offset(0, -18),
+                offset: const Offset(0, -24),
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(
                     color: AppColors.background,
                     borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(18),
+                      top: Radius.circular(24),
                     ),
                   ),
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    22,
-                    16,
-                    16,
-                  ),
                   child: ListView(
-                    padding: EdgeInsets.zero,
-                    children: [
-                      // ==================================================
-                      // DRIVER
-                      // ==================================================
+                    padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.only(left: 4, bottom: 12),
+                        child: Text(
+                          'I am a…',
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w700,
+                            color: _ink,
+                          ),
+                        ),
+                      ),
+
+                      // DRIVER → D02 ONBOARDING
                       _RoleCard(
-                        icon: Icons.directions_car_outlined,
-                        iconBg: const Color(0xFFE6EDF8),
+                        icon: Icons.directions_car_filled_outlined,
+                        iconBg: Color(0xFFE6EDF8),
                         iconColor: AppColors.primary,
                         title: 'Driver',
                         subtitle: 'Find, reserve & pay for parking',
-
-                        // Driver -> D02 Onboarding
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const D02OnboardingLiveBaysScreen(),
-                            ),
-                          );
-                        },
+                        route: AppRoutes.driverEntry,
                       ),
 
-                      const SizedBox(height: 12),
+                      SizedBox(height: 14),
 
-                      // ==================================================
-                      // CAR-PARK OPERATOR
-                      // ==================================================
+                      // OPERATOR → EXISTING OPERATOR LOGIN
                       _RoleCard(
-                        icon: Icons.local_parking,
+                        icon: Icons.local_parking_rounded,
                         iconBg: AppColors.warningBg,
-                        iconColor: const Color(0xFFB7791F),
+                        iconColor: Color(0xFFB7791F),
                         title: 'Car-park Operator',
                         subtitle: 'Manage bays, bookings & gate',
-                        onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.operatorEntry,
-                          );
-                        },
+                        route: AppRoutes.operatorEntry,
                       ),
 
-                      const SizedBox(height: 12),
+                      SizedBox(height: 14),
 
-                      // ==================================================
-                      // TRAFFIC AUTHORITY
-                      // ==================================================
+                      // AUTHORITY → EXISTING AUTHORITY LOGIN
                       _RoleCard(
                         icon: Icons.verified_user_outlined,
-                        iconBg: const Color(0xFFE3F4F1),
-                        iconColor: const Color(0xFF0F766E),
+                        iconBg: Color(0xFFE3F4F1),
+                        iconColor: Color(0xFF0F766E),
                         title: 'Traffic Authority',
                         subtitle: 'Monitor occupancy & enforcement',
-                        onTap: () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.authorityEntry,
-                          );
-                        },
+                        route: AppRoutes.authorityEntry,
                       ),
 
-                      const SizedBox(height: 16),
+                      SizedBox(height: 22),
 
-                      const Text(
-                        'You can switch roles anytime from Profile',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.swap_horiz_rounded,
+                            size: 16,
+                            color: AppColors.textMuted,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'You can switch roles anytime from Profile',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -185,10 +181,6 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// ROLE CARD WIDGET
-// ======================================================================
-
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
     required this.icon,
@@ -196,7 +188,7 @@ class _RoleCard extends StatelessWidget {
     required this.iconColor,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    required this.route,
   });
 
   final IconData icon;
@@ -204,74 +196,104 @@ class _RoleCard extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final String route;
 
-  /// Function that runs when the role card is clicked.
-  final VoidCallback onTap;
+  // ── Role Navigation ──
+  void _navigate(BuildContext context) {
+    HapticFeedback.selectionClick();
+
+    // DRIVER: Open D02 onboarding instead of Driver Login.
+    if (route == AppRoutes.driverEntry) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const D02OnboardingLiveBaysScreen(),
+        ),
+      );
+      return;
+    }
+
+    // OPERATOR and AUTHORITY: Keep existing navigation.
+    Navigator.of(context).pushNamed(route);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(
-          color: AppColors.border,
-          width: 0.5,
+    return Semantics(
+      button: true,
+      label: '$title. $subtitle',
+      excludeSemantics: true,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF14284B).withValues(alpha: 0.07),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              // Role icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 22,
-                ),
-              ),
-
-              const SizedBox(width: 14),
-
-              // Role title and subtitle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            // Updated navigation handler.
+            onTap: () => _navigate(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              child: Row(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: iconBg,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textMuted,
-                      ),
+                    child: Icon(icon, color: iconColor, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: AppColors.textMuted,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEEF2F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 15,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
-
-              const Icon(
-                Icons.chevron_right,
-                color: AppColors.textMuted,
-              ),
-            ],
+            ),
           ),
         ),
       ),

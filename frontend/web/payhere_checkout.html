@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>ParkPin • PayHere Sandbox</title>
+  <style>
+    body{margin:0;background:#f4f6fb;color:#173f78;font:16px system-ui,-apple-system,sans-serif;display:grid;min-height:100vh;place-items:center}
+    main{max-width:440px;margin:20px;padding:32px;background:white;border-radius:16px;box-shadow:0 8px 32px #13284c14;text-align:center}
+    h1{font-size:24px} p{line-height:1.6} button{border:0;border-radius:8px;background:#ffa51f;color:#173f78;padding:13px 20px;cursor:pointer;font-weight:600}
+    #manual{display:none} #error{color:#9e2733;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+<main>
+  <h1>ParkPin • PayHere Sandbox</h1>
+  <p id="status">Preparing your secure sandbox checkout…</p>
+  <p id="error" role="alert"></p>
+  <button id="manual" type="button">Continue to PayHere Sandbox</button>
+  <p><small>Test transactions only. Your booking will be confirmed only after the payment webhook is verified.</small></p>
+</main>
+<script>
+  (async () => {
+    const status = document.querySelector('#status');
+    const error = document.querySelector('#error');
+    const button = document.querySelector('#manual');
+    try {
+      const sourceRaw = new URLSearchParams(location.search).get('source');
+      if (!sourceRaw) throw new Error('Checkout URL is missing. Return to ParkPin.');
+      const source = new URL(sourceRaw);
+      if (source.protocol !== 'https:' || !source.hostname.endsWith('.supabase.co') ||
+          source.pathname !== '/functions/v1/parkpin-payhere-checkout' ||
+          !/^[0-9a-f-]{36}$/i.test(source.searchParams.get('token') || '')) {
+        throw new Error('Unexpected checkout address. Return to ParkPin.');
+      }
+      // The existing Edge Function returns the signed PayHere form as plain text.
+      // A Flutter-hosted page can safely parse that text without executing it.
+      const response = await fetch(source.href, {mode: 'cors', credentials: 'omit', cache:'no-store'});
+      if (!response.ok) throw new Error('Checkout could not be loaded (HTTP ' + response.status + ').');
+      const markup = await response.text();
+      const parsed = new DOMParser().parseFromString(markup, 'text/html');
+      const original = parsed.querySelector('form');
+      if (!original || original.method.toLowerCase() !== 'post') {
+        throw new Error('Checkout is expired or invalid. Return to ParkPin and start a new payment.');
+      }
+      const destination = new URL(original.action, source.href);
+      if (destination.href !== 'https://sandbox.payhere.lk/pay/checkout') {
+        throw new Error('Unexpected payment provider destination.');
+      }
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = destination.href;
+      for (const input of original.querySelectorAll('input[type="hidden"]')) {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = input.name;
+        hidden.value = input.value;
+        form.appendChild(hidden);
+      }
+      const expected = ['merchant_id','order_id','amount','currency','hash','notify_url'];
+      if (!expected.every(name => form.elements.namedItem(name))) {
+        throw new Error('The signed payment details are incomplete.');
+      }
+      document.body.appendChild(form);
+      status.textContent = 'Redirecting to PayHere Sandbox…';
+      button.style.display = 'inline-block';
+      button.addEventListener('click', () => form.submit());
+      form.submit();
+    } catch (e) {
+      status.textContent = 'Unable to open the payment gateway.';
+      error.textContent = e instanceof Error ? e.message : String(e);
+    }
+  })();
+</script>
+</body>
+</html>
