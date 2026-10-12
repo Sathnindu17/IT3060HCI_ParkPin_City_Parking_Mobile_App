@@ -458,4 +458,3 @@ class _AvailabilityFeature extends StatelessWidget {
     );
   }
 }
-

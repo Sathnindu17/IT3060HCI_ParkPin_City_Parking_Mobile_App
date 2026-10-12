@@ -236,7 +236,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           offset: const Offset(0, 6))
                     ],
@@ -249,7 +249,7 @@ class _NotificationSettingsScreenState
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -265,7 +265,7 @@ class _NotificationSettingsScreenState
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -291,7 +291,7 @@ class _NotificationSettingsScreenState
                             ? 'You will receive alerts and reports'
                             : 'All notifications are muted',
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 13),
                       ),
                       const SizedBox(height: 16),
@@ -299,11 +299,11 @@ class _NotificationSettingsScreenState
                         children: [
                           Switch(
                             value: masterEnabled,
-                            activeColor: const Color(0xFFEAA22F),
+                            activeThumbColor: const Color(0xFFEAA22F),
                             activeTrackColor: Colors.white,
                             inactiveThumbColor: Colors.white,
                             inactiveTrackColor:
-                                Colors.white.withOpacity(0.3),
+                                Colors.white.withValues(alpha: 0.3),
                             onChanged: (v) => _toggleMaster(settings, v),
                           ),
                           const SizedBox(width: 8),
@@ -338,7 +338,7 @@ class _NotificationSettingsScreenState
                     color: const Color(0xFFE3F2FD),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: const Color(0xFF1A3B5C).withOpacity(0.2)),
+                        color: const Color(0xFF1A3B5C).withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +396,7 @@ class _NotificationSettingsScreenState
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4))
         ],
@@ -430,7 +430,7 @@ class _NotificationSettingsScreenState
 
     return SwitchListTile(
       value: enabled && masterEnabled,
-      activeColor: const Color(0xFF1A3B5C),
+      activeThumbColor: const Color(0xFF1A3B5C),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       secondary: Container(

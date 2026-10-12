@@ -183,7 +183,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           offset: const Offset(0, 6))
                     ],
@@ -196,7 +196,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.badge_outlined,
@@ -207,7 +207,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Row(
@@ -364,7 +364,7 @@ class _AccountRoleScreenState extends State<AccountRoleScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4))
       ],

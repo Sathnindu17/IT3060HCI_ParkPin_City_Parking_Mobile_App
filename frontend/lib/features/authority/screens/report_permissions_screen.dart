@@ -201,7 +201,7 @@ class _ReportPermissionsScreenState extends State<ReportPermissionsScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 12,
                           offset: const Offset(0, 6))
                     ],
@@ -214,7 +214,7 @@ class _ReportPermissionsScreenState extends State<ReportPermissionsScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.shield_outlined,
@@ -225,7 +225,7 @@ class _ReportPermissionsScreenState extends State<ReportPermissionsScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -268,7 +268,7 @@ class _ReportPermissionsScreenState extends State<ReportPermissionsScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
+                          color: Colors.black.withValues(alpha: 0.03),
                           blurRadius: 10,
                           offset: const Offset(0, 4))
                     ],
@@ -287,7 +287,7 @@ class _ReportPermissionsScreenState extends State<ReportPermissionsScreen> {
                     color: const Color(0xFFE3F2FD),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                        color: const Color(0xFF1A3B5C).withOpacity(0.2)),
+                        color: const Color(0xFF1A3B5C).withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +355,7 @@ class _ReportPermissionsScreenState extends State<ReportPermissionsScreen> {
       tiles.add(
         SwitchListTile(
           value: enabled,
-          activeColor: const Color(0xFF1A3B5C),
+          activeThumbColor: const Color(0xFF1A3B5C),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           secondary: Container(

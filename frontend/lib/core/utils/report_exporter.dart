@@ -106,7 +106,7 @@ class ReportExporter {
                   style: pw.TextStyle(
                       fontSize: 16, fontWeight: pw.FontWeight.bold))),
           pw.SizedBox(height: 10),
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headers: ['Day', 'Bookings', 'Share'],
             data: List.generate(7, (i) {
               final day = i + 1;
@@ -249,7 +249,7 @@ class ReportExporter {
                   style: pw.TextStyle(
                       fontSize: 16, fontWeight: pw.FontWeight.bold))),
           pw.SizedBox(height: 10),
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headers: ['Time Slot', 'Bookings', 'Status'],
             data: List.generate(bucketLabels.length, (i) {
               final isPeak = i == peakIndex;

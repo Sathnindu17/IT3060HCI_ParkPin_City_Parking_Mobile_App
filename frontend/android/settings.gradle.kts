@@ -14,7 +14,7 @@ pluginManagement {
         // Alibaba mirrors to bypass dl.google.com network errors
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("https://maven.aliyun.com/repository/google") }
-        
+
         google()
         mavenCentral()
         gradlePluginPortal()

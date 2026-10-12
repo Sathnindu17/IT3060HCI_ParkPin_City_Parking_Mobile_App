@@ -1,7 +1,27 @@
 import 'package:flutter/widgets.dart';
 
-/// Member 4 – Driver active booking (D14–D22). Register screens here.
+import 'screens/driver_integrated_screen.dart';
+
 class DriverActiveRoutes {
   DriverActiveRoutes._();
-  static Map<String, WidgetBuilder> get routes => {};
+
+  static const String dashboard = '/driver/account';
+  static const String bookings = '/driver/bookings';
+  static const String receipts = '/driver/receipts';
+  static const String profile = '/driver/profile';
+
+  static Map<String, WidgetBuilder> get routes => {
+        dashboard: (_) => const DriverIntegratedScreen(
+              initialIndex: 0,
+            ),
+        bookings: (_) => const DriverIntegratedScreen(
+              initialIndex: 1,
+            ),
+        receipts: (_) => const DriverIntegratedScreen(
+              initialIndex: 2,
+            ),
+        profile: (_) => const DriverIntegratedScreen(
+              initialIndex: 3,
+            ),
+      };
 }

@@ -11,3 +11,5 @@ supabase/.branches/
 *.iml
 .DS_Store
 Thumbs.db
+
+/frontend/android/build/

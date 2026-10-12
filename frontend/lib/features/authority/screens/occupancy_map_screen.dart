@@ -120,7 +120,7 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _colorFor(congestion).withOpacity(0.12),
+                    color: _colorFor(congestion).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.location_on,
@@ -141,7 +141,7 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _colorFor(congestion).withOpacity(0.15),
+                          color: _colorFor(congestion).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(congestion.toUpperCase(),
@@ -287,7 +287,7 @@ class _OccupancyMapScreenState extends State<OccupancyMapScreen> {
                     border: Border.all(color: Colors.white, width: 3),
                     boxShadow: [
                       BoxShadow(
-                          color: _colorFor(congestion).withOpacity(0.5),
+                          color: _colorFor(congestion).withValues(alpha: 0.5),
                           blurRadius: 8,
                           spreadRadius: 2),
                     ],
@@ -543,7 +543,7 @@ class _CongestionListItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4))
           ],
