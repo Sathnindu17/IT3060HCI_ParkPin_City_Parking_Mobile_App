@@ -1,234 +1,140 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'features/driver_active_booking/screens/driver_booking_hub.dart';
-import 'features/driver_active_booking/screens/driver_sign_in_screen.dart';
-import 'features/driver_active_booking/widgets/parking_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:parkpin/core/routes/app_routes.dart';
+import 'package:parkpin/core/theme/app_theme.dart';
 
 class ParkPinApp extends StatelessWidget {
   const ParkPinApp({super.key});
 
+  static const Color navyBlue = Color(0xFF173F78);
+  static const Color orange = Color(0xFFFFA51F);
+
   @override
   Widget build(BuildContext context) {
-    final client = Supabase.instance.client;
+    return MaterialApp(
+      title: 'ParkPin - Smart Parking',
+      debugShowCheckedModeBanner: false,
 
-    return StreamBuilder<AuthState>(
-      stream: client.auth.onAuthStateChange,
-      builder: (context, snapshot) {
-        final userId = client.auth.currentSession?.user.id;
+      // Existing ParkPin application theme
+      theme: AppTheme.light,
 
-        return MaterialApp(
-          // Changing accounts resets the navigation stack.
-          key: ValueKey(userId),
-          debugShowCheckedModeBanner: false,
-          title: 'ParkPin',
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: ParkingStyle.navy,
-            ),
-            scaffoldBackgroundColor: ParkingStyle.background,
-          ),
-          home: userId == null
-              ? const DriverSignInScreen()
-              : DriverRoleGate(
-                  key: ValueKey(userId),
-                ),
-        );
-      },
-    );
-  }
-}
+      // Keep the original team navigation
+      initialRoute: AppRoutes.splash,
+      routes: AppRoutes.routes,
 
-class DriverRoleGate extends StatefulWidget {
-  const DriverRoleGate({super.key});
+      // Display a friendly page for unknown routes
+      onUnknownRoute: (RouteSettings settings) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (BuildContext context) {
+            return Scaffold(
+              backgroundColor: const Color(0xFFF4F6FA),
 
-  @override
-  State<DriverRoleGate> createState() => _DriverRoleGateState();
-}
+              appBar: AppBar(
+                title: const Text('ParkPin'),
+                centerTitle: true,
+                backgroundColor: navyBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
 
-class _DriverRoleGateState extends State<DriverRoleGate> {
-  late Future<bool> _roleFuture;
-
-  bool _signingOut = false;
-  String? _signOutError;
-
-  @override
-  void initState() {
-    super.initState();
-    _roleFuture = _loadRole();
-  }
-
-  Future<bool> _loadRole() async {
-    final client = Supabase.instance.client;
-    final user = client.auth.currentUser;
-
-    if (user == null) return false;
-
-    final profile = await client
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (profile == null) {
-      throw StateError(
-        'Your account has no profile. '
-        'Ask your project administrator to check it.',
-      );
-    }
-
-    return profile['role'] == 'driver';
-  }
-
-  void _retry() {
-    if (_signingOut) return;
-
-    setState(() {
-      _signOutError = null;
-      _roleFuture = _loadRole();
-    });
-  }
-
-  Future<void> _signOut() async {
-    if (_signingOut) return;
-
-    setState(() {
-      _signingOut = true;
-      _signOutError = null;
-    });
-
-    try {
-      await Supabase.instance.client.auth.signOut(
-        scope: SignOutScope.local,
-      );
-
-      // ParkPinApp automatically returns to the login screen.
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _signOutError =
-            'Could not sign out. Check your connection and retry.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _signingOut = false;
-        });
-      }
-    }
-  }
-
-  String _profileError(Object? error) {
-    if (error is StateError) {
-      return error.message.toString();
-    }
-
-    return 'Could not load your driver profile. '
-        'Check your connection and try again.';
-  }
-
-  Widget _accountMessage({
-    required String message,
-    required bool canRetry,
-  }) {
-    return Scaffold(
-      backgroundColor: ParkingStyle.background,
-      appBar: AppBar(
-        title: const Text('Driver account'),
-        backgroundColor: ParkingStyle.background,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: ParkingCard(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.person_outline_rounded,
-                      size: 56,
-                      color: ParkingStyle.navy,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        height: 1.5,
-                        color: ParkingStyle.text,
-                      ),
-                    ),
-                    if (_signOutError != null) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        _signOutError!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.red,
+              body: SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: navyBlue.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.location_off_outlined,
+                            size: 54,
+                            color: navyBlue,
+                          ),
                         ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    if (canRetry)
-                      FilledButton(
-                        onPressed: _signingOut ? null : _retry,
-                        child: const Text('Try again'),
-                      ),
-                    TextButton(
-                      onPressed: _signingOut ? null : _signOut,
-                      child: Text(
-                        _signingOut ? 'Signing out…' : 'Sign out',
-                      ),
+
+                        const SizedBox(height: 24),
+
+                        const Text(
+                          'Page Not Available',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: navyBlue,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        const Text(
+                          'The requested page could not be found. '
+                          'Please return to ParkPin and try again.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: Colors.black54,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Text(
+                          'Route: ${settings.name ?? "Unknown"}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black45,
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pushNamedAndRemoveUntil(
+                                AppRoutes.splash,
+                                (Route<dynamic> route) => false,
+                              );
+                            },
+                            icon: const Icon(Icons.home_outlined),
+                            label: const Text(
+                              'Back to ParkPin',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: orange,
+                              foregroundColor: navyBlue,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _roleFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            backgroundColor: ParkingStyle.background,
-            body: Center(
-              child: CircularProgressIndicator(
-                color: ParkingStyle.orange,
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return _accountMessage(
-            message: _profileError(snapshot.error),
-            canRetry: true,
-          );
-        }
-
-        if (snapshot.data != true) {
-          return _accountMessage(
-            message:
-                'Sign in with a driver account '
-                'to access your parking bookings.',
-            canRetry: false,
-          );
-        }
-
-        return const DriverBookingHub();
+            );
+          },
+        );
       },
     );
   }
