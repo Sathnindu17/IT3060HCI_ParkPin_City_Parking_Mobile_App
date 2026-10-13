@@ -7,6 +7,7 @@ class Bay {
     required this.type,
     required this.status,
     this.level,
+    this.isOutOfService = false,
     this.updatedAt,
   });
 
@@ -20,9 +21,12 @@ class Bay {
   final String? level; // e.g. L1
   final String type; // standard | ev
   final String status; // available | occupied | reserved
+  /// Closed by the operator (repairs, blocked). Drivers cannot book it.
+  final bool isOutOfService;
   final DateTime? updatedAt;
 
-  bool get isAvailable => status == available;
+  /// Free and open – a driver could park here right now.
+  bool get isAvailable => status == available && !isOutOfService;
   bool get isEv => type == 'ev';
   String get display => level == null ? label : '$label · $level';
 
@@ -33,6 +37,7 @@ class Bay {
         level: m['level'] as String?,
         type: (m['type'] as String?) ?? 'standard',
         status: (m['status'] as String?) ?? available,
+        isOutOfService: (m['is_out_of_service'] as bool?) ?? false,
         updatedAt: m['updated_at'] == null ? null : DateTime.parse(m['updated_at'] as String).toLocal(),
       );
 
