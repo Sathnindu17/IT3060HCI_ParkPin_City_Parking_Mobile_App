@@ -1,14 +1,25 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Required for Supabase, map tiles, and routing services -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ======================================= -->
+    <!-- REQUIRED PERMISSIONS -->
+    <!-- ======================================= -->
 
-    <!-- Required for approximate location -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Internet access for Supabase and Maps -->
+    <uses-permission
+        android:name="android.permission.INTERNET" />
 
-    <!-- Required for precise GPS location -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Approximate device location -->
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Precise GPS location -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- ======================================= -->
+    <!-- PARKPIN APPLICATION -->
+    <!-- ======================================= -->
 
     <application
         android:label="ParkPin"
@@ -25,29 +36,73 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- Flutter normal theme -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
+            <!-- =================================== -->
+            <!-- NORMAL APPLICATION LAUNCH -->
+            <!-- =================================== -->
+
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- =================================== -->
+            <!-- GOOGLE OAUTH / SUPABASE DEEP LINK -->
+            <!-- =================================== -->
+
+            <!--
+                Redirect URL:
+                parkpin://login-callback/
+
+                Allows Google OAuth to return to
+                ParkPin after Supabase authentication.
+            -->
+
+            <intent-filter>
+                <action
+                    android:name="android.intent.action.VIEW" />
+
+                <category
+                    android:name="android.intent.category.DEFAULT" />
+
+                <category
+                    android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="parkpin"
+                    android:host="login-callback" />
             </intent-filter>
 
         </activity>
 
-        <!-- Flutter plugin registration -->
+        <!-- ======================================= -->
+        <!-- FLUTTER PLUGIN REGISTRATION -->
+        <!-- ======================================= -->
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
 
     </application>
 
-    <!-- Required for text-processing activity queries -->
+    <!-- ======================================= -->
+    <!-- TEXT PROCESSING QUERIES -->
+    <!-- ======================================= -->
+
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action
+                android:name="android.intent.action.PROCESS_TEXT" />
+
+            <data
+                android:mimeType="text/plain" />
         </intent>
     </queries>
 
