@@ -1,6 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:parkpin/services/auth_service.dart';
 import 'package:parkpin/services/supabase_service.dart';
 import 'package:parkpin/features/driver_search_booking/screens/d06_driver_signup_screen.dart';
@@ -9,21 +11,19 @@ import 'package:parkpin/features/driver_search_booking/screens/d10_driver_home_s
 
 class D05DriverLoginScreen extends StatefulWidget {
   const D05DriverLoginScreen({super.key, this.onDriverLoginSuccess});
-
   final VoidCallback? onDriverLoginSuccess;
-
   @override
   State<D05DriverLoginScreen> createState() => _D05DriverLoginScreenState();
 }
-
 class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
   bool _obscurePassword = true;
   bool _isLoading = false;
-
+  bool _googleFlowPending = false;
+  bool _handlingGoogleSession = false;
+  StreamSubscription<AuthState>? _authSubscription;
   static const background = Color(0xFFF4F6FA);
   static const navy = Color(0xFF173F78);
   static const blue = Color(0xFF285E98);
@@ -31,63 +31,87 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
   static const textDark = Color(0xFF172033);
   static const textGrey = Color(0xFF7A8494);
   static const border = Color(0xFFE5E9F0);
+  @override
+  void initState() {
+    super.initState();
+
+    // Android: the running screen can receive a signed-in event when Google
+    // returns via parkpin://login-callback/.
+    // Web: Google reloads /#/driver/login, so also inspect restored sessions.
+    _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen(
+      (authState) {
+        if (!mounted) return;
+        final user = authState.session?.user;
+        if (user == null) return;
+
+        final returnedToDriverLogin =
+            kIsWeb && Uri.base.fragment.startsWith('/driver/login');
+        if ((_googleFlowPending || returnedToDriverLogin ||
+                (!kIsWeb && authState.event == AuthChangeEvent.initialSession)) &&
+            (authState.event == AuthChangeEvent.signedIn ||
+                authState.event == AuthChangeEvent.initialSession)) {
+          if (user.appMetadata['provider'] == 'google') {
+            _finishGoogleLogin(user);
+          }
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('ParkPin auth listener error: $error');
+      },
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !kIsWeb) return;
+      if (!Uri.base.fragment.startsWith('/driver/login')) return;
+      final user = SupabaseService.client.auth.currentUser;
+      if (user != null && user.appMetadata['provider'] == 'google') {
+        _finishGoogleLogin(user);
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-
   // Validate email before calling Supabase.
   String? _validateEmail(String? value) {
     final email = (value ?? '').trim();
-
     if (email.isEmpty) {
       return 'Please enter your email address.';
     }
-
     final emailPattern = RegExp(
       r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
     );
-
     if (!emailPattern.hasMatch(email)) {
       return 'Please enter a valid email address.';
     }
-
     return null;
   }
-
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your password.';
     }
-
     return null;
   }
-
   // Supabase driver login.
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
-
     if (_isLoading) return;
-
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       final user = await AuthService.instance.signInDriver(
         _emailController.text.trim().toLowerCase(),
         _passwordController.text,
       );
-
       if (!mounted) return;
-
       debugPrint('Driver login successful: ${user.id}');
-
       if (widget.onDriverLoginSuccess != null) {
         widget.onDriverLoginSuccess!();
       } else {
@@ -98,11 +122,8 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
       }
     } on AuthException catch (error) {
       if (!mounted) return;
-
       final details = error.message.toLowerCase();
-
       String message;
-
       if (details.contains('invalid login')) {
         message = 'Incorrect email or password.';
       } else if (details.contains('email not confirmed')) {
@@ -112,7 +133,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
       } else {
         message = SupabaseService.friendlyError(error);
       }
-
       _showError(message);
     } catch (error) {
       if (!mounted) return;
@@ -123,7 +143,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
       }
     }
   }
-
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -133,27 +152,70 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
       ),
     );
   }
-
   void _openForgotPassword() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const D07DriverForgotPasswordScreen()),
     );
   }
-
   void _openSignUp() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const D06DriverSignUpScreen()));
   }
+  Future<void> _continueWithGoogle() async {
+    if (_isLoading) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _isLoading = true);
+    _googleFlowPending = true;
 
-  void _continueWithGoogle() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Google Sign-In will be connected next.'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    try {
+      // Web callback opens the named login route, so it can process the
+      // restored Supabase session even after the browser reloads.
+      final redirectUrl = kIsWeb
+          ? '${Uri.base.origin}/#/driver/login'
+          : 'parkpin://login-callback/';
+
+      final launched = await SupabaseService.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: redirectUrl,
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+      );
+
+      if (!launched && mounted) {
+        _googleFlowPending = false;
+        _showError('Could not open Google sign-in. Please try again.');
+      }
+    } catch (error) {
+      _googleFlowPending = false;
+      if (mounted) {
+        _showError(SupabaseService.friendlyError(error));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
+  void _finishGoogleLogin(User user) {
+    if (!mounted || _handlingGoogleSession) return;
+    _handlingGoogleSession = true;
+    _googleFlowPending = false;
+    debugPrint('Google authentication succeeded: ${user.id}');
+
+    // OAuth confirms identity, not driver authorization. Ensure the app's
+    // driver profile/role checks and database RLS protect driver-only data.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.onDriverLoginSuccess != null) {
+        widget.onDriverLoginSuccess!();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const D10DriverHomeScreen()),
+          (route) => false,
+        );
+      }
+    });
+  }
   InputDecoration _inputDecoration({
     required String hint,
     required IconData icon,
@@ -190,7 +252,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
       errorStyle: const TextStyle(fontSize: 10),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,9 +381,7 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
                     const Text(
                       'Mobile or email',
                       style: TextStyle(
@@ -332,7 +391,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -344,9 +402,7 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         icon: Icons.email_outlined,
                       ),
                     ),
-
                     const SizedBox(height: 14),
-
                     const Text(
                       'Password',
                       style: TextStyle(
@@ -356,7 +412,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -388,7 +443,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         ),
                       ),
                     ),
-
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -403,9 +457,7 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 2),
-
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -444,10 +496,8 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                               ),
                       ),
                     ),
-
                     const Spacer(),
                     const SizedBox(height: 30),
-
                     const Row(
                       children: [
                         Expanded(child: Divider(color: border)),
@@ -461,9 +511,7 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         Expanded(child: Divider(color: border)),
                       ],
                     ),
-
                     const SizedBox(height: 12),
-
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -497,9 +545,7 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -520,7 +566,6 @@ class _D05DriverLoginScreenState extends State<D05DriverLoginScreen> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 6),
                   ],
                 ),
