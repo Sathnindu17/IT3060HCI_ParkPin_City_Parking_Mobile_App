@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Android build and Gradle cache
+android/app/build/
+android/app/.gradle/
+android/build/
+android/.gradle/
