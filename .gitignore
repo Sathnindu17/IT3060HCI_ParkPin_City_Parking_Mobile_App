@@ -13,3 +13,7 @@ supabase/.branches/
 Thumbs.db
 
 /frontend/android/build/
+
+# Java crash logs
+hs_err_pid*.log
+replay_pid*.log
