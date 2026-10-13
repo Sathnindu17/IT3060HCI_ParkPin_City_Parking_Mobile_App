@@ -37,9 +37,13 @@ class _OperatorNotificationsScreenState extends State<OperatorNotificationsScree
       await _sub?.cancel();
       _sub = _svc.watchNotifications().listen(
         (list) => setState(() => _items = list),
-        onError: (Object e) => setState(() => _error = SupabaseService.friendlyError(e)),
+        onError: (Object e) {
+          debugPrint('O09 notifications stream error: $e');
+          setState(() => _error = SupabaseService.friendlyError(e));
+        },
       );
     } catch (e) {
+      debugPrint('O09 notifications load error: $e');
       if (mounted) setState(() => _error = SupabaseService.friendlyError(e));
     }
   }

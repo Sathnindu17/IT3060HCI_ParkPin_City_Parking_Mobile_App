@@ -37,6 +37,10 @@ void main() {
   testWidgets('D01 splash shows the logo, then opens Role Selection', (
     tester,
   ) async {
+    // Supabase is not initialized in tests, so mute the splash notice.
+    final originalDebugPrint = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {};
+
     // Step 1: Launch the ParkPin application.
     await tester.pumpWidget(const ParkPinApp());
 
@@ -59,6 +63,8 @@ void main() {
 
     // Step 6: Complete the navigation transition.
     await tester.pumpAndSettle();
+    // Flutter requires debugPrint restored before the test ends.
+    debugPrint = originalDebugPrint;
 
     // Step 7: Verify Role Selection has appeared.
     expect(find.text('Welcome to ParkPin'), findsOneWidget);
