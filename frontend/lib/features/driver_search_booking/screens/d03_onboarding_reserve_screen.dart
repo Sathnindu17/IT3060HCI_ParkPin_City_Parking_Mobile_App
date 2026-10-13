@@ -399,4 +399,3 @@ class _ReservationFeature extends StatelessWidget {
     );
   }
 }
-

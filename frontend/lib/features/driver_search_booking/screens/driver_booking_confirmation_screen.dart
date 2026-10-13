@@ -462,6 +462,17 @@ class _DriverBookingConfirmationScreenState
                   child: const Text('Refresh'),
                 ),
               ],
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/driver/bookings',
+                    (_) => false,
+                  );
+                },
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: const Text('Open My Bookings'),
+              ),
               if (validBooking && hasPayment && code.isEmpty)
                 const Padding(
                   padding: EdgeInsets.only(top: 8),

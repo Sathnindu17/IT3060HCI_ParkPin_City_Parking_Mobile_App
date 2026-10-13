@@ -6,7 +6,12 @@ import 'package:parkpin/services/auth_service.dart';
 import 'package:parkpin/services/supabase_service.dart';
 
 class D10DriverHomeScreen extends StatefulWidget {
-  const D10DriverHomeScreen({super.key});
+  const D10DriverHomeScreen({
+    super.key,
+    this.onOpenBookings,
+  });
+
+  final VoidCallback? onOpenBookings;
 
   @override
   State<D10DriverHomeScreen> createState() =>
@@ -63,13 +68,14 @@ class _D10DriverHomeScreenState
   }
 
   void _showBookingsMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Booking history will be available soon.',
-        ),
-      ),
-    );
+    final callback = widget.onOpenBookings;
+
+    if (callback != null) {
+      callback();
+      return;
+    }
+
+    Navigator.of(context).pushNamed('/driver/bookings');
   }
 
   @override
@@ -103,7 +109,7 @@ class _D10DriverHomeScreenState
                         child: _buildQuickAction(
                           icon: Icons.calendar_month_outlined,
                           title: 'My Bookings',
-                          subtitle: 'Coming soon',
+                          subtitle: 'View and manage parking',
                           onTap: _showBookingsMessage,
                         ),
                       ),

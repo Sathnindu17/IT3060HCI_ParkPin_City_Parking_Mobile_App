@@ -420,19 +420,26 @@ class _DriverSearchMapScreenState extends State<DriverSearchMapScreen> {
   }
 
   void _navigate(int index) {
-    if (index == 0) {
-      return;
-    }
+    if (index < 0 || index > 3) return;
 
     final callback = widget.onNavigate;
 
     if (callback != null) {
       callback(index);
-
       return;
     }
 
-    _message('Connect this navigation item to your group’s app routes.');
+    const destinations = [
+      '/driver/account',
+      '/driver/bookings',
+      '/driver/receipts',
+      '/driver/profile',
+    ];
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      destinations[index],
+      (_) => false,
+    );
   }
 
   Color _availabilityColor(ParkingMapFacility facility) {
