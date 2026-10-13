@@ -15,7 +15,8 @@ class ParkingMapService {
           'id,name,address,latitude,longitude,'
           'rate_per_hour,reservation_fee',
         )
-        .eq('is_demo', true)
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
         .order('name');
 
     return rows

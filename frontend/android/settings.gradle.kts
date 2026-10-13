@@ -37,6 +37,8 @@ dependencyResolutionManagement {
 
         google()
         mavenCentral()
+        // Flutter engine artifacts; PREFER_SETTINGS ignores the repo Flutter adds per-project
+        maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
     }
 }
 

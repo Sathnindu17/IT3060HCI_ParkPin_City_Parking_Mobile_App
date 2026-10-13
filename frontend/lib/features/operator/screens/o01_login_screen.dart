@@ -16,6 +16,46 @@ class OperatorLoginScreen extends StatefulWidget {
   State<OperatorLoginScreen> createState() => _OperatorLoginScreenState();
 }
 
+// shortcut: hard-coded because car parks can't be read before login (RLS); update when car parks change.
+const _demoCarParks = [
+  'Active Booking Test Parking (Demo)',
+  'Bambalapitiya Parking (Demo)',
+  'Battaramulla Parking (Demo)',
+  'Borella Central Parking (Demo)',
+  'Colombo City Centre',
+  'Colombo City Parking (Demo)',
+  'Dehiwala Parking (Demo)',
+  'Dematagoda Parking (Demo)',
+  'Fort Central Parking (Demo)',
+  'Galle Face Parking (Demo)',
+  'Havelock Parking (Demo)',
+  'Kelaniya Parking (Demo)',
+  'Kiribathgoda Parking (Demo)',
+  'Kollupitiya Parking (Demo)',
+  'Liberty Plaza',
+  'Maradana Station Parking (Demo)',
+  'Mount Lavinia Parking (Demo)',
+  'Narahenpita Parking (Demo)',
+  'Nawala Junction Parking (Demo)',
+  'Nugegoda Central Parking (Demo)',
+  'One Galle Face',
+  'Pelawatte Parking (Demo)',
+  'Pettah Market Parking (Demo)',
+  'Rajagiriya Parking (Demo)',
+  'Recovery Test Parking (Demo)',
+  'Slave Island Parking (Demo)',
+  'Thalawathugoda Parking (Demo)',
+  'Town Hall Parking (Demo)',
+  'Union Place Parking',
+  'Wattala Parking (Demo)',
+  'Wellawatte Parking (Demo)',
+];
+
+/// Same email rule as supabase/add_operator_accounts.sql.
+String operatorEmailFor(String carPark) => carPark == 'Union Place Parking'
+    ? 'operator@parkpin.lk'
+    : 'operator.${carPark.replaceAll('(Demo)', '').replaceAll(RegExp('[^a-zA-Z]'), '').toLowerCase()}@parkpin.lk';
+
 class _OperatorLoginScreenState extends State<OperatorLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
@@ -133,6 +173,20 @@ class _OperatorLoginScreenState extends State<OperatorLoginScreen> {
                                 const SizedBox(height: 4),
                                 const Text('Log in to manage your car park.', style: OpStyle.pageSubtitle),
                                 const SizedBox(height: 20),
+                                DropdownButtonFormField<String>(
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Car park (fills in email)',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: [
+                                    for (final c in _demoCarParks) DropdownMenuItem(value: c, child: Text(c)),
+                                  ],
+                                  onChanged: (c) {
+                                    if (c != null) _email.text = operatorEmailFor(c);
+                                  },
+                                ),
+                                const SizedBox(height: 16),
                                 OpField(
                                   label: 'Email',
                                   controller: _email,
