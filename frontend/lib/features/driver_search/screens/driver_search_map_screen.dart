@@ -146,7 +146,7 @@ class _DriverSearchMapScreenState extends State<DriverSearchMapScreen> {
 
           _loading = false;
 
-          _error = 'No demo locations found. Run the 0007 SQL seed first.';
+          _error = 'No parking locations found.';
         });
 
         return;
